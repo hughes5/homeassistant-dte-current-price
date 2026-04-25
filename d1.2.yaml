@@ -4,27 +4,46 @@ template:
         unit_of_measurement: "USD/kWh"
         device_class: monetary
         state: >
+          {# Total marginal rates from the Michigan Public Service Commission DTE tariff,
+             including D1.2 base energy charges, the D1.2 distribution charge,
+             C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.
+             Fixed monthly service charges are excluded from the per-kWh marginal rate.
+             Source: DTE tariff PDF March 2026, D1.2 rate page plus C8.5 and C9.8 surcharge summaries.
+          #}
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
           {% if month in [11, 12, 1, 2, 3, 4, 5] %}
-          {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-           0.234531
+            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+              {# Winter peak total: 0.264274 #}
+              {% set capacity = 0.03951 %}
+              {% set non_capacity = 0.09736 %}
+            {% else %}
+              {# Winter off-peak total: 0.179814 #}
+              {% set capacity = 0.01513 %}
+              {% set non_capacity = 0.03728 %}
+            {% endif %}
           {% else %}
-           0.144221
+            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+              {# Summer peak total: 0.289434 #}
+              {% set capacity = 0.04677 %}
+              {% set non_capacity = 0.11526 %}
+            {% else %}
+              {# Summer off-peak total: 0.181964 #}
+              {% set capacity = 0.01575 %}
+              {% set non_capacity = 0.03881 %}
+            {% endif %}
           {% endif %}
-          {% elif month in [6, 7, 8, 9, 10] %}
-          {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-           0.261451
-          {% else %}
-           0.146501
-          {% endif %}
-          {% endif %}
+          {% set distribution = 0.09726 %}
+          {% set supply_surcharge = 0.020501 %}
+          {% set delivery_surcharge = 0.009643 %}
+          {{ (capacity + non_capacity + distribution + supply_surcharge + delivery_surcharge) | round(5) }}
   - sensor:
       - name: "D1.2 Outflow"
         unit_of_measurement: "USD/kWh"
         device_class: monetary
         state: >
+          {# This outflow rate is a sell-back estimate and is not derived from the D1.2 tariff marginal-cost accounting above. #}
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}

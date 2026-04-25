@@ -4,22 +4,29 @@ template:
         unit_of_measurement: "USD/kWh"
         device_class: monetary
         state: >
-          {# Current rates found through the Michigan Public Service Commission's website,
-             https://www.michigan.gov/mpsc . These rates include:
-             * capacity charge
-             * non-capacity charge
-             * delivery charge
-             * Power Supply Cost Recovery (PSCR) charge of 0.25 cents/kWh, which has been static since November 2024 but is subject to change
+          {# Total marginal rates from the Michigan Public Service Commission DTE tariff,
+             including D1.11 Standard TOU base energy charges, the D1.11 distribution charge,
+             C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.
+             Fixed monthly service charges are excluded from the per-kWh marginal rate.
+             Source: DTE tariff PDF March 2026, D1.11 schedule pages plus C8.5 and C9.8 surcharge summaries.
           #}
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
           {% if hour < 15 or hour >= 19 or day_of_week in [6, 7] %}
-            0.17885
+            {# Off-Peak total: 0.21539 #}
+            {% set capacity = 0.03240 %}
+            {% set non_capacity = 0.05469 %}
+          {% elif month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+            {# Winter Peak total: 0.23149 #}
+            {% set capacity = 0.03839 %}
+            {% set non_capacity = 0.06480 %}
           {% else %}
-          {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
-            0.19374
-          {% elif month in [6, 7, 8, 9] %}
-            0.23644
+            {# Summer Peak total: 0.27237 #}
+            {% set capacity = 0.05360 %}
+            {% set non_capacity = 0.09047 %}
           {% endif %}
-          {% endif %}
+          {% set distribution = 0.09726 %}
+          {% set supply_surcharge = 0.021283 %}
+          {% set delivery_surcharge = 0.009757 %}
+          {{ (capacity + non_capacity + distribution + supply_surcharge + delivery_surcharge) | round(5) }}
