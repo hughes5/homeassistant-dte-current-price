@@ -1,0 +1,80 @@
+pcsr: 0.01877
+securitization:
+  river_rouge: {d1.1: 0.000174, d1.2: 0.000152, d1.7: 0.00013, d1.11: 0.000221}
+  tcsc: {d1.1: 0.0018, d1.2: 0.001579, d1.7: 0.001352, d1.11: 0.002292}
+delivery_surcharge: {d1.1: 0.009646, d1.2: 0.009643, d1.7: 0.009558, d1.11: 0.009757}
+distribution: 0.09726
+schedules:
+  d1.1:
+    name: D1.1 Interruptible Space Conditioning
+    conditions:
+    - name: winter
+      months: [11, 12, 1, 2, 3, 4, 5]
+      capacity: 0.00702
+      non_capacity: 0.04535
+    - name: summer
+      months: [6, 7, 8, 9, 10]
+      capacity: 0.02832
+      non_capacity: 0.04535
+  d1.2:
+    name: D1.2 Enhanced Time-of-Use
+    conditions:
+    - name: winter_peak
+      months: [11, 12, 1, 2, 3, 4, 5]
+      weekdays: [1, 2, 3, 4, 5]
+      hours: {start: 11, end: 19}
+      capacity: 0.03951
+      non_capacity: 0.09736
+    - name: winter_off_peak
+      months: [11, 12, 1, 2, 3, 4, 5]
+      capacity: 0.01513
+      non_capacity: 0.03728
+    - name: summer_peak
+      months: [6, 7, 8, 9, 10]
+      weekdays: [1, 2, 3, 4, 5]
+      hours: {start: 11, end: 19}
+      capacity: 0.04677
+      non_capacity: 0.11526
+    - name: summer_off_peak
+      months: [6, 7, 8, 9, 10]
+      capacity: 0.01575
+      non_capacity: 0.03881
+  d1.7:
+    name: D1.7 Geothermal Time-of-Day
+    conditions:
+    - name: winter_peak
+      months: [10, 11, 12, 1, 2, 3, 4, 5]
+      weekdays: [1, 2, 3, 4, 5]
+      hours: {start: 11, end: 19}
+      capacity: 0.02221
+      non_capacity: 0.03749
+    - name: winter_off_peak
+      months: [10, 11, 12, 1, 2, 3, 4, 5]
+      capacity: 0.01745
+      non_capacity: 0.02946
+    - name: summer_peak
+      months: [6, 7, 8, 9]
+      weekdays: [1, 2, 3, 4, 5]
+      hours: {start: 11, end: 19}
+      capacity: 0.0514
+      non_capacity: 0.08677
+    - name: summer_off_peak
+      months: [6, 7, 8, 9]
+      capacity: 0.01703
+      non_capacity: 0.02874
+  d1.11:
+    name: D1.11 Standard Time-of-Use
+    conditions:
+    - {name: off_peak, default: true, capacity: 0.0324, non_capacity: 0.05469}
+    - name: winter_peak
+      months: [10, 11, 12, 1, 2, 3, 4, 5]
+      weekdays: [1, 2, 3, 4, 5]
+      hours: {start: 15, end: 19}
+      capacity: 0.03839
+      non_capacity: 0.0648
+    - name: summer_peak
+      months: [6, 7, 8, 9]
+      weekdays: [1, 2, 3, 4, 5]
+      hours: {start: 15, end: 19}
+      capacity: 0.0536
+      non_capacity: 0.09047

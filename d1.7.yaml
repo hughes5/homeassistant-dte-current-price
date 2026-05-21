@@ -5,36 +5,27 @@ template:
         device_class: monetary
         state: >
           {# Total marginal rates from the Michigan Public Service Commission DTE tariff,
-             including D1.7 base energy charges, the D1.7 distribution charge,
+             including D1.7 Geothermal Time-of-Day base energy charges, the D1.7 distribution charge,
              C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.
              Fixed monthly service charges are excluded from the per-kWh marginal rate.
-             Source: DTE tariff PDF March 2026, D1.7 rate page plus C8.5 and C9.8 surcharge summaries.
+             Source: DTE tariff PDF (dtee1cur.pdf) — computed from rates/data.yaml
+             PSCR factor: 18.770 mills/kWh
+             C8.5 total supply surcharge: 2.0252¢/kWh
+             C9.8 delivery surcharge (per schedule): see rates/data.yaml
           #}
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
           {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
             {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              {# Winter peak total: 0.18677 #}
-              {% set capacity = 0.02221 %}
-              {% set non_capacity = 0.03749 %}
+              {{ 0.18677 }}
             {% else %}
-              {# Winter off-peak total: 0.17398 #}
-              {% set capacity = 0.01745 %}
-              {% set non_capacity = 0.02946 %}
+              {{ 0.17398 }}
             {% endif %}
           {% else %}
             {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              {# Summer peak total: 0.26524 #}
-              {% set capacity = 0.05140 %}
-              {% set non_capacity = 0.08677 %}
+              {{ 0.26524 }}
             {% else %}
-              {# Summer off-peak total: 0.17284 #}
-              {% set capacity = 0.01703 %}
-              {% set non_capacity = 0.02874 %}
+              {{ 0.17284 }}
             {% endif %}
           {% endif %}
-          {% set distribution = 0.09726 %}
-          {% set supply_surcharge = 0.020252 %}
-          {% set delivery_surcharge = 0.009558 %}
-          {{ (capacity + non_capacity + distribution + supply_surcharge + delivery_surcharge) | round(5) }}

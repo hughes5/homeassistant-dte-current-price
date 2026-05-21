@@ -1,0 +1,56 @@
+name: Update PSCR
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml pdfplumber
+
+      - name: Update PSCR from rate book PDF
+        id: update
+        run: python scripts/update_pscr.py --release-notes
+
+      - name: Read effective date
+        id: effective-date
+        run: |
+          {
+            read -r tag_suffix
+            read -r name_str
+          } < pscr_effective_date.txt
+          echo "tag_suffix=$tag_suffix" >> "$GITHUB_OUTPUT"
+          echo "name=$name_str" >> "$GITHUB_OUTPUT"
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        id: auto-commit
+        with:
+          commit_message: "Update PSCR factor from DTE rate book PDF"
+          commit_user_name: "DTE Rate Bot"
+          commit_user_email: "actions@github.com"
+          tagging_message: "pscr-${{ steps.effective-date.outputs.tag_suffix }}"
+
+      - name: Create release
+        if: steps.auto-commit.outputs.changes_detected == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pscr-${{ steps.effective-date.outputs.tag_suffix }}
+          name: "PSCR Update — ${{ steps.effective-date.outputs.name }}"
+          body_path: RELEASE_NOTES.md

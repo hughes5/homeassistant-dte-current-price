@@ -1,0 +1,349 @@
+"""Generate HA YAML template files with pre-computed rate totals.
+
+Reads rates/data.yaml (source of truth for rate components) and produces
+the Home Assistant YAML sensor templates with pre-computed totals per
+time-of-use condition — no addition at HA runtime.
+
+Usage:
+    python scripts/generate_rates.py [--data-dir RATES_DIR] [--output-dir .]
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("PyYAML is required. Install with: pip install pyyaml")
+    sys.exit(1)
+
+
+def load_data(data_dir):
+    path = Path(data_dir) / "data.yaml"
+    with open(path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    if not isinstance(data, dict):
+        print(f"ERROR: {path} is empty or not a valid YAML mapping")
+        sys.exit(1)
+
+    required_keys = {"pcsr", "securitization", "delivery_surcharge", "distribution", "schedules"}
+    missing = required_keys - set(data.keys())
+    if missing:
+        print(f"ERROR: {path} missing required keys: {', '.join(sorted(missing))}")
+        sys.exit(1)
+
+    return data
+
+
+def compute_total(data, schedule_key, condition):
+    c = condition
+    base = c["capacity"] + c["non_capacity"]
+    dist = data["distribution"]
+    rr = data["securitization"]["river_rouge"][schedule_key]
+    tcsc = data["securitization"]["tcsc"][schedule_key]
+    pcsr = data["pcsr"]
+    supply_total = pcsr + rr + tcsc
+    delivery = data["delivery_surcharge"][schedule_key]
+    return round(base + dist + supply_total + delivery, 5)
+
+
+def make_comment_total(total):
+    """Format total with trailing zeros stripped for comment display."""
+    s = f"{total:.5f}"
+    return s.rstrip("0").rstrip(".")
+
+
+def fmt_month_list(months):
+    return ", ".join(str(m) for m in months)
+
+
+def build_header_block(data, schedule_key, schedule):
+    id_ = schedule_key.upper()
+    name = schedule["name"]
+    total_surcharge = data["pcsr"] + (
+        data["securitization"]["river_rouge"][schedule_key]
+        + data["securitization"]["tcsc"][schedule_key]
+    )
+    return [
+        "{# Total marginal rates from the Michigan Public Service Commission DTE tariff,",
+        f"   including {name} base energy charges, the {id_} distribution charge,",
+        "   C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.",
+        "   Fixed monthly service charges are excluded from the per-kWh marginal rate.",
+        "   Source: DTE tariff PDF (dtee1cur.pdf) — computed from rates/data.yaml",
+        f"   PSCR factor: {data['pcsr']*1000:.3f} mills/kWh",
+        f"   C8.5 total supply surcharge: {total_surcharge*100:.4f}¢/kWh",
+        "   C9.8 delivery surcharge (per schedule): see rates/data.yaml",
+        "#}",
+    ]
+
+
+def write_yaml(path, lines):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"  wrote {path}")
+
+
+def generate_d1_1(data, output_dir):
+    """D1.1: month-based seasons, no TOU."""
+    key = "d1.1"
+    sched = data["schedules"][key]
+    conds = sched["conditions"]
+    if len(conds) != 2:
+        print(f"ERROR: {key} expected 2 conditions, got {len(conds)}")
+        sys.exit(1)
+    winter, summer = conds
+
+    winter_total = compute_total(data, key, winter)
+    summer_total = compute_total(data, key, summer)
+
+    out = []
+    out.append("template:")
+    out.append("  - sensor:")
+    out.append('      - name: "D1.1 Inflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.append("          {% set month = now().month %}")
+    out.append(f"          {{% if month in [{fmt_month_list(winter['months'])}] %}}")
+    out.append(f"            {{{{ {winter_total} }}}}")
+    out.append("          {% else %}")
+    out.append(f"            {{{{ {summer_total} }}}}")
+    out.append("          {% endif %}")
+
+    write_yaml(Path(output_dir) / "d1.1.yaml", out)
+
+
+def generate_d1_2(data, output_dir):
+    """D1.2: month-based outer, peak/off-peak inner."""
+    key = "d1.2"
+    sched = data["schedules"][key]
+    conds = sched["conditions"]
+    if len(conds) != 4:
+        print(f"ERROR: {key} expected 4 conditions, got {len(conds)}")
+        sys.exit(1)
+    wp, wop, sp, sop = conds
+
+    wp_total = compute_total(data, key, wp)
+    wop_total = compute_total(data, key, wop)
+    sp_total = compute_total(data, key, sp)
+    sop_total = compute_total(data, key, sop)
+    wp_h = wp["hours"]
+    sp_h = sp["hours"]
+
+    out = []
+    out.append("template:")
+    out.append("  - sensor:")
+    out.append('      - name: "D1.2 Inflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.append("          {% set month = now().month %}")
+    out.append("          {% set day_of_week = now().isoweekday() %}")
+    out.append("          {% set hour = now().hour %}")
+    out.append(f"          {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(
+        f"            {{% if hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"              {{{{ {wp_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {wop_total} }}}}")
+    out.append("            {% endif %}")
+    out.append("          {% else %}")
+    out.append(
+        f"            {{% if hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"              {{{{ {sp_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {sop_total} }}}}")
+    out.append("            {% endif %}")
+    out.append("          {% endif %}")
+
+    # D1.2 Outflow sensor (sell-back estimate, not from tariff components)
+    out.append("  - sensor:")
+    out.append('      - name: "D1.2 Outflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.append("          {# This outflow rate is a sell-back estimate and is not derived from the D1.2 tariff marginal-cost accounting above. #}")
+    out.append("          {% set month = now().month %}")
+    out.append("          {% set day_of_week = now().isoweekday() %}")
+    out.append("          {% set hour = now().hour %}")
+    out.append("          {% if month in [11, 12, 1, 2, 3, 4, 5] %}")
+    out.append("            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}")
+    out.append("              0.1321")
+    out.append("            {% else %}")
+    out.append("              0.05059")
+    out.append("            {% endif %}")
+    out.append("          {% elif month in [6, 7, 8, 9, 10] %}")
+    out.append("            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}")
+    out.append("              0.15369")
+    out.append("            {% else %}")
+    out.append("              0.05265")
+    out.append("            {% endif %}")
+    out.append("          {% endif %}")
+
+    write_yaml(Path(output_dir) / "d1.2.yaml", out)
+
+
+def generate_d1_7(data, output_dir):
+    """D1.7: month-based outer, peak/off-peak inner."""
+    key = "d1.7"
+    sched = data["schedules"][key]
+    conds = sched["conditions"]
+    if len(conds) != 4:
+        print(f"ERROR: {key} expected 4 conditions, got {len(conds)}")
+        sys.exit(1)
+    wp, wop, sp, sop = conds
+
+    wp_total = compute_total(data, key, wp)
+    wop_total = compute_total(data, key, wop)
+    sp_total = compute_total(data, key, sp)
+    sop_total = compute_total(data, key, sop)
+    wp_h = wp["hours"]
+    sp_h = sp["hours"]
+
+    out = []
+    out.append("template:")
+    out.append("  - sensor:")
+    out.append('      - name: "D1.7 Inflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.append("          {% set month = now().month %}")
+    out.append("          {% set day_of_week = now().isoweekday() %}")
+    out.append("          {% set hour = now().hour %}")
+    out.append(f"          {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(
+        f"            {{% if hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"              {{{{ {wp_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {wop_total} }}}}")
+    out.append("            {% endif %}")
+    out.append("          {% else %}")
+    out.append(
+        f"            {{% if hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"              {{{{ {sp_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {sop_total} }}}}")
+    out.append("            {% endif %}")
+    out.append("          {% endif %}")
+
+    write_yaml(Path(output_dir) / "d1.7.yaml", out)
+
+
+def generate_d1_11(data, output_dir):
+    """D1.11: off-peak catch-all first, then season/hours-based peaks."""
+    key = "d1.11"
+    sched = data["schedules"][key]
+    conds = [c for c in sched["conditions"] if not c.get("default")]
+    default_cond = next((c for c in sched["conditions"] if c.get("default")), None)
+    if default_cond is None:
+        print(f"ERROR: No default condition with default:true in {key}")
+        sys.exit(1)
+
+    off_peak_total = compute_total(data, key, default_cond)
+
+    out = []
+    out.append("template:")
+    out.append("  - sensor:")
+    out.append('      - name: "D1.11 Inflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.append("          {% set month = now().month %}")
+    out.append("          {% set day_of_week = now().isoweekday() %}")
+    out.append("          {% set hour = now().hour %}")
+
+    # Build the Jinja condition chain
+    # Off-peak gate: hour outside ALL peak windows OR weekend
+    min_start = min(c["hours"]["start"] for c in conds)
+    max_end = max(c["hours"]["end"] for c in conds)
+    out.append(
+        f"          {{% if hour < {min_start} or hour >= {max_end} or day_of_week in [6, 7] %}}"
+    )
+    out.append(f"            {{{{ {off_peak_total} }}}}")
+
+    for cond in conds:
+        h = cond["hours"]
+        out.append(
+            f"          {{% elif month in [{fmt_month_list(cond['months'])}] %}}"
+        )
+        total = compute_total(data, key, cond)
+        out.append(f"            {{{{ {total} }}}}")
+
+    out.append("          {% else %}")
+    out.append(f"            {{{{ {off_peak_total} }}}}")
+    out.append("          {% endif %}")
+
+    write_yaml(Path(output_dir) / "d1.11.yaml", out)
+
+
+def build_release_notes(data, output_dir):
+    """Write a Markdown release notes file with computed per-schedule totals."""
+    rows = []
+    for key in ["d1.1", "d1.2", "d1.7", "d1.11"]:
+        sched = data["schedules"][key]
+        for cond in sched["conditions"]:
+            total = compute_total(data, key, cond)
+            label = cond.get("name", "default").replace("_", " ").title()
+            rows.append((key.upper(), sched["name"], label, f"{total:.5f}"))
+
+    lines = [
+        "## Updated DTE Electric Rates\n",
+        f"PSCR factor: {data['pcsr']*1000:.3f} mills/kWh "
+        f"({data['pcsr']*100:.4f}¢/kWh = ${data['pcsr']}/kWh)\n",
+        "| Schedule | Name | Condition | Total ($/kWh) |",
+        "|---|---|---|---|",
+    ]
+    for r in rows:
+        lines.append(f"| {' | '.join(r)} |")
+    lines.append("")
+
+    path = Path(output_dir) / "RELEASE_NOTES.md"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"  wrote {path}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate HA rate YAML files")
+    parser.add_argument(
+        "--data-dir",
+        default="rates",
+        help="Directory containing data.yaml (default: rates)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=".",
+        help="Output directory for HA YAML files (default: current dir)",
+    )
+    parser.add_argument(
+        "--release-notes",
+        action="store_true",
+        help="Write RELEASE_NOTES.md with computed totals table",
+    )
+    args = parser.parse_args()
+
+    data = load_data(args.data_dir)
+
+    print("Generating HA YAML rate templates...")
+    generate_d1_1(data, args.output_dir)
+    generate_d1_2(data, args.output_dir)
+    generate_d1_7(data, args.output_dir)
+    generate_d1_11(data, args.output_dir)
+
+    if args.release_notes:
+        build_release_notes(data, args.output_dir)
+
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()

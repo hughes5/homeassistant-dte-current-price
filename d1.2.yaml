@@ -5,39 +5,30 @@ template:
         device_class: monetary
         state: >
           {# Total marginal rates from the Michigan Public Service Commission DTE tariff,
-             including D1.2 base energy charges, the D1.2 distribution charge,
+             including D1.2 Enhanced Time-of-Use base energy charges, the D1.2 distribution charge,
              C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.
              Fixed monthly service charges are excluded from the per-kWh marginal rate.
-             Source: DTE tariff PDF March 2026, D1.2 rate page plus C8.5 and C9.8 surcharge summaries.
+             Source: DTE tariff PDF (dtee1cur.pdf) — computed from rates/data.yaml
+             PSCR factor: 18.770 mills/kWh
+             C8.5 total supply surcharge: 2.0501¢/kWh
+             C9.8 delivery surcharge (per schedule): see rates/data.yaml
           #}
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
           {% if month in [11, 12, 1, 2, 3, 4, 5] %}
             {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              {# Winter peak total: 0.264274 #}
-              {% set capacity = 0.03951 %}
-              {% set non_capacity = 0.09736 %}
+              {{ 0.26427 }}
             {% else %}
-              {# Winter off-peak total: 0.179814 #}
-              {% set capacity = 0.01513 %}
-              {% set non_capacity = 0.03728 %}
+              {{ 0.17981 }}
             {% endif %}
           {% else %}
             {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              {# Summer peak total: 0.289434 #}
-              {% set capacity = 0.04677 %}
-              {% set non_capacity = 0.11526 %}
+              {{ 0.28943 }}
             {% else %}
-              {# Summer off-peak total: 0.181964 #}
-              {% set capacity = 0.01575 %}
-              {% set non_capacity = 0.03881 %}
+              {{ 0.18196 }}
             {% endif %}
           {% endif %}
-          {% set distribution = 0.09726 %}
-          {% set supply_surcharge = 0.020501 %}
-          {% set delivery_surcharge = 0.009643 %}
-          {{ (capacity + non_capacity + distribution + supply_surcharge + delivery_surcharge) | round(5) }}
   - sensor:
       - name: "D1.2 Outflow"
         unit_of_measurement: "USD/kWh"
@@ -48,15 +39,15 @@ template:
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
           {% if month in [11, 12, 1, 2, 3, 4, 5] %}
-          {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-           0.1321
-          {% else %}
-           0.05059
-          {% endif %}
+            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+              0.1321
+            {% else %}
+              0.05059
+            {% endif %}
           {% elif month in [6, 7, 8, 9, 10] %}
-          {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-           0.15369
-          {% else %}
-           0.05265
-          {% endif %}
+            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+              0.15369
+            {% else %}
+              0.05265
+            {% endif %}
           {% endif %}

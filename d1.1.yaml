@@ -5,23 +5,17 @@ template:
         device_class: monetary
         state: >
           {# Total marginal rates from the Michigan Public Service Commission DTE tariff,
-             including D1.1 Interruptible Space Conditioning base energy charges,
-             D1.1 residential distribution charge, C8.5 power supply surcharge totals,
-             and C9.8 delivery surcharge totals.
+             including D1.1 Interruptible Space Conditioning base energy charges, the D1.1 distribution charge,
+             C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.
              Fixed monthly service charges are excluded from the per-kWh marginal rate.
-             Source: DTE tariff PDF March 2026, D1.1 rate page plus C8.5 and C9.8 surcharge summaries.
+             Source: DTE tariff PDF (dtee1cur.pdf) — computed from rates/data.yaml
+             PSCR factor: 18.770 mills/kWh
+             C8.5 total supply surcharge: 2.0744¢/kWh
+             C9.8 delivery surcharge (per schedule): see rates/data.yaml
           #}
           {% set month = now().month %}
           {% if month in [11, 12, 1, 2, 3, 4, 5] %}
-            {# Winter total: 0.18002 #}
-            {% set capacity = 0.00702 %}
-            {% set non_capacity = 0.04535 %}
+            {{ 0.18002 }}
           {% else %}
-            {# Summer total: 0.20132 #}
-            {% set capacity = 0.02832 %}
-            {% set non_capacity = 0.04535 %}
+            {{ 0.20132 }}
           {% endif %}
-          {% set distribution = 0.09726 %}
-          {% set supply_surcharge = 0.020744 %}
-          {% set delivery_surcharge = 0.009646 %}
-          {{ (capacity + non_capacity + distribution + supply_surcharge + delivery_surcharge) | round(5) }}
