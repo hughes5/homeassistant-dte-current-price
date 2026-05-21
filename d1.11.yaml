@@ -1,6 +1,7 @@
 template:
   - sensor:
       - name: "D1.11 Inflow"
+        unique_id: "d1_11_inflow"
         unit_of_measurement: "USD/kWh"
         device_class: monetary
         state: >

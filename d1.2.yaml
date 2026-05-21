@@ -1,6 +1,7 @@
 template:
   - sensor:
       - name: "D1.2 Inflow"
+        unique_id: "d1_2_inflow"
         unit_of_measurement: "USD/kWh"
         device_class: monetary
         state: >
@@ -31,6 +32,7 @@ template:
           {% endif %}
   - sensor:
       - name: "D1.2 Outflow"
+        unique_id: "d1_2_outflow"
         unit_of_measurement: "USD/kWh"
         device_class: monetary
         state: >
