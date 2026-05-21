@@ -47,8 +47,19 @@ jobs:
           commit_user_email: "actions@github.com"
           commit_author: "hughes5 <6740468+hughes5@users.noreply.github.com>"
 
+      - name: Check if release exists
+        id: check-release
+        run: |
+          if gh release view "pscr-${{ steps.effective-date.outputs.tag_suffix }}" --json id &>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Create release
-        if: steps.auto-commit.outputs.changes_detected == 'true'
+        if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: pscr-${{ steps.effective-date.outputs.tag_suffix }}
