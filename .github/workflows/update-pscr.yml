@@ -45,7 +45,7 @@ jobs:
           commit_message: "Update PSCR factor from DTE rate book PDF"
           commit_user_name: "DTE Rate Bot"
           commit_user_email: "actions@github.com"
-          tagging_message: "pscr-${{ steps.effective-date.outputs.tag_suffix }}"
+          commit_author: "hughes5 <6740468+hughes5@users.noreply.github.com>"
 
       - name: Create release
         if: steps.auto-commit.outputs.changes_detected == 'true'
