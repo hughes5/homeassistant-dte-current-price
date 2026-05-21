@@ -16,12 +16,13 @@ template:
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
+          {# Off peak: weekends & non-peak hours #}
           {% if hour < 15 or hour >= 19 or day_of_week in [6, 7] %}
             {{ 0.21539 }}
+          {# Winter peak: 10, 11, 12, 1, 2, 3, 4, 5, M-F 15-19 #}
           {% elif month in [10, 11, 12, 1, 2, 3, 4, 5] %}
             {{ 0.23149 }}
-          {% elif month in [6, 7, 8, 9] %}
-            {{ 0.27237 }}
+          {# Summer peak: remaining months, M-F 15-19 #}
           {% else %}
-            {{ 0.21539 }}
+            {{ 0.27237 }}
           {% endif %}

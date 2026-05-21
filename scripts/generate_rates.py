@@ -239,7 +239,7 @@ def generate_d1_7(data, output_dir):
 
 
 def generate_d1_11(data, output_dir):
-    """D1.11: off-peak catch-all first, then season/hours-based peaks."""
+    """D1.11: off-peak catch-all, then seasonal peaks (summer implicit via else)."""
     key = "d1.11"
     sched = data["schedules"][key]
     conds = [c for c in sched["conditions"] if not c.get("default")]
@@ -249,6 +249,13 @@ def generate_d1_11(data, output_dir):
         sys.exit(1)
 
     off_peak_total = compute_total(data, key, default_cond)
+    wp_cond = conds[0]
+    sp_cond = conds[1]
+    wp_total = compute_total(data, key, wp_cond)
+    sp_total = compute_total(data, key, sp_cond)
+
+    min_start = min(c["hours"]["start"] for c in conds)
+    max_end = max(c["hours"]["end"] for c in conds)
 
     out = []
     out.append("template:")
@@ -261,26 +268,20 @@ def generate_d1_11(data, output_dir):
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
-
-    # Build the Jinja condition chain
-    # Off-peak gate: hour outside ALL peak windows OR weekend
-    min_start = min(c["hours"]["start"] for c in conds)
-    max_end = max(c["hours"]["end"] for c in conds)
+    out.append("          {# Off peak: weekends & non-peak hours #}")
     out.append(
         f"          {{% if hour < {min_start} or hour >= {max_end} or day_of_week in [6, 7] %}}"
     )
     out.append(f"            {{{{ {off_peak_total} }}}}")
-
-    for cond in conds:
-        h = cond["hours"]
-        out.append(
-            f"          {{% elif month in [{fmt_month_list(cond['months'])}] %}}"
-        )
-        total = compute_total(data, key, cond)
-        out.append(f"            {{{{ {total} }}}}")
-
+    months_str = fmt_month_list(wp_cond['months'])
+    out.append(f"          {{# Winter peak: {months_str}, M-F {min_start}-{max_end} #}}")
+    out.append(
+        f"          {{% elif month in [{fmt_month_list(wp_cond['months'])}] %}}"
+    )
+    out.append(f"            {{{{ {wp_total} }}}}")
+    out.append(f"          {{# Summer peak: remaining months, M-F {min_start}-{max_end} #}}")
     out.append("          {% else %}")
-    out.append(f"            {{{{ {off_peak_total} }}}}")
+    out.append(f"            {{{{ {sp_total} }}}}")
     out.append("          {% endif %}")
 
     write_yaml(Path(output_dir) / "d1.11.yaml", out)
