@@ -71,10 +71,10 @@ def build_header_block(data, schedule_key, schedule):
         f"   including {name} base energy charges, the {id_} distribution charge,",
         "   C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.",
         "   Fixed monthly service charges are excluded from the per-kWh marginal rate.",
-        "   Source: DTE tariff PDF (dtee1cur.pdf) — computed from rates/data.yaml",
         f"   PSCR factor: {data['pcsr']*1000:.3f} mills/kWh",
         f"   C8.5 total supply surcharge: {total_surcharge*100:.4f}¢/kWh",
-        "   C9.8 delivery surcharge (per schedule): see rates/data.yaml",
+        "   See https://github.com/hughes5/homeassistant-dte-current-price",
+        "   for source data and automated rate updates.",
         "#}",
     ]
 

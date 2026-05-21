@@ -9,10 +9,10 @@ template:
              including D1.7 Geothermal Time-of-Day base energy charges, the D1.7 distribution charge,
              C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.
              Fixed monthly service charges are excluded from the per-kWh marginal rate.
-             Source: DTE tariff PDF (dtee1cur.pdf) — computed from rates/data.yaml
              PSCR factor: 18.770 mills/kWh
              C8.5 total supply surcharge: 2.0252¢/kWh
-             C9.8 delivery surcharge (per schedule): see rates/data.yaml
+             See https://github.com/hughes5/homeassistant-dte-current-price
+             for source data and automated rate updates.
           #}
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
