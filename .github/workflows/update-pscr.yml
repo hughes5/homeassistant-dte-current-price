@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 0 * * 0"
   workflow_dispatch:
+    inputs:
+      publish_release_assets:
+        description: "Create or update release assets even when rates are unchanged"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -60,9 +65,15 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Create release
-        if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false'
+        if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false' || inputs.publish_release_assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: pscr-${{ steps.effective-date.outputs.tag_suffix }}
           name: "PSCR Update — ${{ steps.effective-date.outputs.name }}"
           body_path: RELEASE_NOTES.md
+          overwrite_files: true
+          files: |
+            d1.1.yaml
+            d1.2.yaml
+            d1.7.yaml
+            d1.11.yaml
