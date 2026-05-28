@@ -27,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyyaml pdfplumber
+          pip install -r requirements.txt
 
       - name: Update PSCR from rate book PDF
         id: update
