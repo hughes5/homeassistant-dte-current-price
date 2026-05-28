@@ -36,13 +36,11 @@ jobs:
         id: update
         run: python scripts/update_pscr.py --release-notes
 
-      - name: Read effective date
+      - name: Read PSCR metadata
         id: effective-date
         run: |
-          {
-            read -r tag_suffix
-            read -r name_str
-          } < pscr_effective_date.txt
+          tag_suffix=$(python3 -c "import yaml; print(yaml.safe_load(open('pscr_metadata.yaml'))['tag_suffix'])")
+          name_str=$(python3 -c "import yaml; print(yaml.safe_load(open('pscr_metadata.yaml'))['name'])")
           echo "tag_suffix=$tag_suffix" >> "$GITHUB_OUTPUT"
           echo "name=$name_str" >> "$GITHUB_OUTPUT"
 

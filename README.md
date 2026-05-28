@@ -88,6 +88,42 @@ Source data lives in [`rates/data.yaml`](rates/data.yaml). A weekly GitHub Actio
 
 ## Contributing
 
-- Edit [`rates/data.yaml`](rates/data.yaml) — that's the single source of truth
-- Run `python3 scripts/generate_rates.py` to regenerate the HA YAML files
-- Run `python3 scripts/update_pscr.py --no-download` to test PSCR extraction from the cached PDF
+### Prerequisites
+
+- Python 3.13+
+- pip
+
+### Setup
+
+```sh
+# Clone the repository
+git clone https://github.com/hughes5/homeassistant-dte-current-price.git
+cd homeassistant-dte-current-price
+
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate   # Linux/macOS
+# .venv\Scripts\activate    # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Data model
+
+[`rates/data.yaml`](rates/data.yaml) is the single source of truth for all rate data. The YAML schedule files (`d1.1.yaml`, `d1.2.yaml`, etc.) at the repository root are **generated** — never edit them directly. To change rates, edit `rates/data.yaml` and re-run the generator.
+
+### Making changes
+
+```sh
+# Regenerate the Home Assistant YAML files from the source data
+python scripts/generate_rates.py
+
+# Test PSCR extraction from the cached PDF
+python scripts/update_pscr.py --no-download
+
+# Run tests
+pytest tests/ -v
+```
+
+After verifying your changes, open a pull request.

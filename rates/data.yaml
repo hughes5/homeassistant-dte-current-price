@@ -1,3 +1,4 @@
+# Seasonal months: summer = June–September, winter = October–May (per DTE tariff).
 pscr: 0.01877
 securitization:
   river_rouge: {d1.1: 0.000174, d1.2: 0.000152, d1.7: 0.00013, d1.11: 0.000221}
@@ -9,11 +10,11 @@ schedules:
     name: D1.1 Interruptible Space Conditioning
     conditions:
     - name: winter
-      months: [11, 12, 1, 2, 3, 4, 5]
+      months: [10, 11, 12, 1, 2, 3, 4, 5]
       capacity: 0.00702
       non_capacity: 0.04535
     - name: summer
-      months: [6, 7, 8, 9, 10]
+      months: [6, 7, 8, 9]
       capacity: 0.02832
       non_capacity: 0.04535
   d1.2:
@@ -26,23 +27,23 @@ schedules:
       summer_off_peak: 0.05265
     conditions:
     - name: winter_peak
-      months: [11, 12, 1, 2, 3, 4, 5]
+      months: [10, 11, 12, 1, 2, 3, 4, 5]
       weekdays: [1, 2, 3, 4, 5]
       hours: {start: 11, end: 19}
       capacity: 0.03951
       non_capacity: 0.09736
     - name: winter_off_peak
-      months: [11, 12, 1, 2, 3, 4, 5]
+      months: [10, 11, 12, 1, 2, 3, 4, 5]
       capacity: 0.01513
       non_capacity: 0.03728
     - name: summer_peak
-      months: [6, 7, 8, 9, 10]
+      months: [6, 7, 8, 9]
       weekdays: [1, 2, 3, 4, 5]
       hours: {start: 11, end: 19}
       capacity: 0.04677
       non_capacity: 0.11526
     - name: summer_off_peak
-      months: [6, 7, 8, 9, 10]
+      months: [6, 7, 8, 9]
       capacity: 0.01575
       non_capacity: 0.03881
   d1.7:

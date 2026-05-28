@@ -356,7 +356,7 @@ def main():
     new_pscr, eff_month, eff_year = extract_pscr_from_pdf(pdf_path)
 
     if args.release_notes and (not eff_month or not eff_year):
-        stale_path = Path(args.output_dir) / "pscr_effective_date.txt"
+        stale_path = Path(args.output_dir) / "pscr_metadata.yaml"
         if stale_path.exists():
             stale_path.unlink()
             print(f"  removed stale {stale_path}")
@@ -369,17 +369,19 @@ def main():
         )
 
     if args.release_notes:
-        date_path = Path(args.output_dir) / "pscr_effective_date.txt"
+        metadata_path = Path(args.output_dir) / "pscr_metadata.yaml"
         month_num = {
             "January": 1, "February": 2, "March": 3, "April": 4,
             "May": 5, "June": 6, "July": 7, "August": 8,
             "September": 9, "October": 10, "November": 11, "December": 12,
         }[eff_month]
-        date_path.write_text(
-            f"{eff_year}-{month_num:02d}\n{eff_month} {eff_year}\n",
-            encoding="utf-8",
-        )
-        print(f"  wrote {date_path}")
+        metadata = {
+            "tag_suffix": f"{eff_year}-{month_num:02d}",
+            "name": f"{eff_month} {eff_year}",
+        }
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            yaml.dump(metadata, f, default_flow_style=False, sort_keys=False)
+        print(f"  wrote {metadata_path}")
 
     data = load_data(data_dir)
     old_pscr = data["pscr"]
