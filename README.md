@@ -15,6 +15,8 @@ Pick your schedule and install its YAML as a Home Assistant package. Keeping the
 
 Each sensor provides a `{{ state }}` in USD/kWh for the current marginal rate (excludes fixed monthly service charges). Add it to an energy dashboard or automation.
 
+> **Warning:** Do not edit the YAML files (`d1.1.yaml`, `d1.2.yaml`, etc.) directly. They are generated from [`rates/data.yaml`](rates/data.yaml) by `scripts/generate_rates.py`. To change rates, edit the source data and re-run the generator.
+
 ## Home Assistant install/update options
 
 Quick-start setup: you can open a schedule file above and paste its contents directly into `configuration.yaml`.
