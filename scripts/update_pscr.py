@@ -34,6 +34,7 @@ DEFAULT_PDF_URL = (
 
 MIN_REASONABLE_PSCR_CENTS = 0.0
 MAX_REASONABLE_PSCR_CENTS = 10.0
+MAX_PSCR_CHANGE_RATIO = 0.5  # reject changes larger than ±50% unless --force
 EXPECTED_RESIDENTIAL_SCHEDULES = ("D1.1", "D1.2", "D1.7", "D1.11")
 
 
@@ -296,6 +297,22 @@ def run_generator(data_dir, output_dir, release_notes=False):
         sys.exit(result.returncode)
 
 
+def check_pscr_delta(old_pscr, new_pscr, force=False):
+    """Reject implausibly large PSCR swings unless --force is set."""
+    if old_pscr <= 0:
+        return
+    change_ratio = abs(new_pscr - old_pscr) / old_pscr
+    if change_ratio > MAX_PSCR_CHANGE_RATIO and not force:
+        fail(
+            f"PSCR change ({old_pscr} → {new_pscr}) exceeds ±{MAX_PSCR_CHANGE_RATIO:.0%} threshold "
+            f"(actual: {change_ratio:.0%})",
+            [
+                "A large PSCR swing usually means the PDF parser read the wrong column or table.",
+                "Re-run with --force to override this check if the value is genuinely correct.",
+            ],
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Update PSCR factor from DTE rate book PDF")
     parser.add_argument(
@@ -321,6 +338,10 @@ def main():
     parser.add_argument(
         "--release-notes", action="store_true",
         help="Also write RELEASE_NOTES.md with computed totals table",
+    )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Allow PSCR changes larger than the sanity-check threshold",
     )
     args = parser.parse_args()
 
@@ -366,6 +387,7 @@ def main():
     if abs(new_pscr - old_pscr) < 0.00001:
         print("  PSCR unchanged — no update needed")
     else:
+        check_pscr_delta(old_pscr, new_pscr, args.force)
         print(f"  PSCR changed: {old_pscr} → {new_pscr}")
         data["pscr"] = new_pscr
         save_data(data_dir, data)

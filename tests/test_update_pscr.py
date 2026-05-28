@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-from update_pscr import extract_pscr_from_c85_text, validate_pscr_cents
+from update_pscr import check_pscr_delta, extract_pscr_from_c85_text, validate_pscr_cents
 
 
 class TestValidatePscrCents:
@@ -79,3 +79,21 @@ class TestExtractPscrFromC85Text:
     def test_no_d1_rows_raises(self):
         with pytest.raises(SystemExit):
             extract_pscr_from_c85_text("C8.5 Summary of surcharges\n\nSome other text here\n")
+
+
+class TestCheckPscrDelta:
+    def test_small_change_passes(self):
+        check_pscr_delta(0.01877, 0.01900)  # ~1.2%, should not raise
+
+    def test_large_change_raises(self):
+        with pytest.raises(SystemExit):
+            check_pscr_delta(0.01877, 0.04000)  # ~113%
+
+    def test_force_overrides(self):
+        check_pscr_delta(0.01877, 0.04000, force=True)  # should not raise
+
+    def test_zero_old_skips_check(self):
+        check_pscr_delta(0.0, 0.05)  # old=0, should not raise
+
+    def test_exact_threshold_passes(self):
+        check_pscr_delta(1.0, 1.499)  # 49.9%, just under 50%
