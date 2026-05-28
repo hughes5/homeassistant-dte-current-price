@@ -28,7 +28,7 @@ def load_data(data_dir):
         print(f"ERROR: {path} is empty or not a valid YAML mapping")
         sys.exit(1)
 
-    required_keys = {"pcsr", "securitization", "delivery_surcharge", "distribution", "schedules"}
+    required_keys = {"pscr", "securitization", "delivery_surcharge", "distribution", "schedules"}
     missing = required_keys - set(data.keys())
     if missing:
         print(f"ERROR: {path} missing required keys: {', '.join(sorted(missing))}")
@@ -43,8 +43,8 @@ def compute_total(data, schedule_key, condition):
     dist = data["distribution"]
     rr = data["securitization"]["river_rouge"][schedule_key]
     tcsc = data["securitization"]["tcsc"][schedule_key]
-    pcsr = data["pcsr"]
-    supply_total = pcsr + rr + tcsc
+    pscr = data["pscr"]
+    supply_total = pscr + rr + tcsc
     delivery = data["delivery_surcharge"][schedule_key]
     return round(base + dist + supply_total + delivery, 5)
 
@@ -62,7 +62,7 @@ def fmt_month_list(months):
 def build_header_block(data, schedule_key, schedule):
     id_ = schedule_key.upper()
     name = schedule["name"]
-    total_surcharge = data["pcsr"] + (
+    total_surcharge = data["pscr"] + (
         data["securitization"]["river_rouge"][schedule_key]
         + data["securitization"]["tcsc"][schedule_key]
     )
@@ -71,7 +71,7 @@ def build_header_block(data, schedule_key, schedule):
         f"   including {name} base energy charges, the {id_} distribution charge,",
         "   C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.",
         "   Fixed monthly service charges are excluded from the per-kWh marginal rate.",
-        f"   PSCR factor: {data['pcsr']*1000:.3f} mills/kWh",
+        f"   PSCR factor: {data['pscr']*1000:.3f} mills/kWh",
         f"   C8.5 total supply surcharge: {total_surcharge*100:.4f}¢/kWh",
         "   See https://github.com/hughes5/homeassistant-dte-current-price",
         "   for source data and automated rate updates.",
@@ -304,8 +304,8 @@ def build_release_notes(data, output_dir):
 
     lines = [
         "## Updated DTE Electric Rates\n",
-        f"PSCR factor: {data['pcsr']*1000:.3f} mills/kWh "
-        f"({data['pcsr']*100:.4f}¢/kWh = ${data['pcsr']}/kWh)\n",
+        f"PSCR factor: {data['pscr']*1000:.3f} mills/kWh "
+        f"({data['pscr']*100:.4f}¢/kWh = ${data['pscr']}/kWh)\n",
         "| Schedule | Name | Condition | Total ($/kWh) |",
         "|---|---|---|---|",
     ]

@@ -261,8 +261,8 @@ def load_data(data_dir):
     if not isinstance(data, dict):
         print(f"ERROR: {path} is empty or not a valid YAML mapping")
         sys.exit(1)
-    if "pcsr" not in data:
-        fail(f"{path} missing required key 'pcsr'")
+    if "pscr" not in data:
+        fail(f"{path} missing required key 'pscr'")
 
     return data
 
@@ -332,7 +332,7 @@ def main():
     else:
         print(f"Using cached PDF: {pdf_path}")
 
-    new_pcsr, eff_month, eff_year = extract_pscr_from_pdf(pdf_path)
+    new_pscr, eff_month, eff_year = extract_pscr_from_pdf(pdf_path)
 
     if args.release_notes and (not eff_month or not eff_year):
         stale_path = Path(args.output_dir) / "pscr_effective_date.txt"
@@ -361,13 +361,13 @@ def main():
         print(f"  wrote {date_path}")
 
     data = load_data(data_dir)
-    old_pcsr = data["pcsr"]
+    old_pscr = data["pscr"]
 
-    if abs(new_pcsr - old_pcsr) < 0.00001:
+    if abs(new_pscr - old_pscr) < 0.00001:
         print("  PSCR unchanged — no update needed")
     else:
-        print(f"  PSCR changed: {old_pcsr} → {new_pcsr}")
-        data["pcsr"] = new_pcsr
+        print(f"  PSCR changed: {old_pscr} → {new_pscr}")
+        data["pscr"] = new_pscr
         save_data(data_dir, data)
 
     run_generator(data_dir, args.output_dir, args.release_notes)
