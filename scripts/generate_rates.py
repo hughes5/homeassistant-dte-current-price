@@ -146,22 +146,18 @@ def generate_d1_2(data, output_dir):
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
-    out.append(f"          {{% if month in [{fmt_month_list(wp['months'])}] %}}")
     out.append(
-        f"            {{% if hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+        f"          {{% if month in [{fmt_month_list(wp['months'])}] and hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
     )
-    out.append(f"              {{{{ {wp_total} }}}}")
-    out.append("            {% else %}")
-    out.append(f"              {{{{ {wop_total} }}}}")
-    out.append("            {% endif %}")
+    out.append(f"            {{{{ {wp_total} }}}}")
+    out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"            {{{{ {wop_total} }}}}")
+    out.append(
+        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"            {{{{ {sp_total} }}}}")
     out.append("          {% else %}")
-    out.append(
-        f"            {{% if hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"              {{{{ {sp_total} }}}}")
-    out.append("            {% else %}")
-    out.append(f"              {{{{ {sop_total} }}}}")
-    out.append("            {% endif %}")
+    out.append(f"            {{{{ {sop_total} }}}}")
     out.append("          {% endif %}")
 
     # D1.2 Outflow sensor (sell-back estimate, not from tariff components)
@@ -176,22 +172,18 @@ def generate_d1_2(data, output_dir):
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
-    out.append(f"          {{% if month in [{fmt_month_list(wp['months'])}] %}}")
     out.append(
-        f"            {{% if hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+        f"          {{% if month in [{fmt_month_list(wp['months'])}] and hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
     )
-    out.append(f"              {outflow.get('winter_peak', 'unknown')}")
-    out.append("            {% else %}")
-    out.append(f"              {outflow.get('winter_off_peak', 'unknown')}")
-    out.append("            {% endif %}")
+    out.append(f"            {outflow.get('winter_peak', 'unknown')}")
+    out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"            {outflow.get('winter_off_peak', 'unknown')}")
+    out.append(
+        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"            {outflow.get('summer_peak', 'unknown')}")
     out.append("          {% else %}")
-    out.append(
-        f"            {{% if hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"              {outflow.get('summer_peak', 'unknown')}")
-    out.append("            {% else %}")
-    out.append(f"              {outflow.get('summer_off_peak', 'unknown')}")
-    out.append("            {% endif %}")
+    out.append(f"            {outflow.get('summer_off_peak', 'unknown')}")
     out.append("          {% endif %}")
 
     write_yaml(Path(output_dir) / "d1.2.yaml", out)
@@ -226,22 +218,18 @@ def generate_d1_7(data, output_dir):
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
-    out.append(f"          {{% if month in [{fmt_month_list(wp['months'])}] %}}")
     out.append(
-        f"            {{% if hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+        f"          {{% if month in [{fmt_month_list(wp['months'])}] and hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
     )
-    out.append(f"              {{{{ {wp_total} }}}}")
-    out.append("            {% else %}")
-    out.append(f"              {{{{ {wop_total} }}}}")
-    out.append("            {% endif %}")
+    out.append(f"            {{{{ {wp_total} }}}}")
+    out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"            {{{{ {wop_total} }}}}")
+    out.append(
+        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"            {{{{ {sp_total} }}}}")
     out.append("          {% else %}")
-    out.append(
-        f"            {{% if hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"              {{{{ {sp_total} }}}}")
-    out.append("            {% else %}")
-    out.append(f"              {{{{ {sop_total} }}}}")
-    out.append("            {% endif %}")
+    out.append(f"            {{{{ {sop_total} }}}}")
     out.append("          {% endif %}")
 
     write_yaml(Path(output_dir) / "d1.7.yaml", out)

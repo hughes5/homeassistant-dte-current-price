@@ -17,18 +17,14 @@ template:
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
-          {% if month in [11, 12, 1, 2, 3, 4, 5] %}
-            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              {{ 0.26427 }}
-            {% else %}
-              {{ 0.17981 }}
-            {% endif %}
+          {% if month in [11, 12, 1, 2, 3, 4, 5] and hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+            {{ 0.26427 }}
+          {% elif month in [11, 12, 1, 2, 3, 4, 5] %}
+            {{ 0.17981 }}
+          {% elif hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+            {{ 0.28943 }}
           {% else %}
-            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              {{ 0.28943 }}
-            {% else %}
-              {{ 0.18196 }}
-            {% endif %}
+            {{ 0.18196 }}
           {% endif %}
   - sensor:
       - name: "D1.2 Outflow"
@@ -40,16 +36,12 @@ template:
           {% set month = now().month %}
           {% set day_of_week = now().isoweekday() %}
           {% set hour = now().hour %}
-          {% if month in [11, 12, 1, 2, 3, 4, 5] %}
-            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              0.1321
-            {% else %}
-              0.05059
-            {% endif %}
+          {% if month in [11, 12, 1, 2, 3, 4, 5] and hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+            0.1321
+          {% elif month in [11, 12, 1, 2, 3, 4, 5] %}
+            0.05059
+          {% elif hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
+            0.15369
           {% else %}
-            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-              0.15369
-            {% else %}
-              0.05265
-            {% endif %}
+            0.05265
           {% endif %}
