@@ -8,9 +8,12 @@ Usage:
     python scripts/generate_rates.py [--data-dir RATES_DIR] [--output-dir .]
 """
 
+from __future__ import annotations
+
 import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 try:
     import yaml
@@ -19,7 +22,18 @@ except ImportError:
     sys.exit(1)
 
 
-def load_data(data_dir):
+def load_data(data_dir: str | Path) -> dict[str, Any]:
+    """Load and validate the rate data from a YAML file.
+
+    Args:
+        data_dir: Directory containing data.yaml.
+
+    Returns:
+        Parsed YAML data as a dictionary.
+
+    Raises:
+        SystemExit: If the file is missing, invalid, or lacks required keys.
+    """
     path = Path(data_dir) / "data.yaml"
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -37,7 +51,17 @@ def load_data(data_dir):
     return data
 
 
-def compute_total(data, schedule_key, condition):
+def compute_total(data: dict[str, Any], schedule_key: str, condition: dict[str, Any]) -> float:
+    """Compute the total marginal rate for a given schedule condition.
+
+    Args:
+        data: Full rate data dictionary.
+        schedule_key: Schedule identifier (e.g. "d1.1").
+        condition: Condition dict with capacity/non_capacity fields.
+
+    Returns:
+        Total rate in $/kWh, rounded to 5 decimal places.
+    """
     c = condition
     base = c["capacity"] + c["non_capacity"]
     dist = data["distribution"]
@@ -49,17 +73,35 @@ def compute_total(data, schedule_key, condition):
     return round(base + dist + supply_total + delivery, 5)
 
 
-def make_comment_total(total):
+def make_comment_total(total: float) -> str:
     """Format total with trailing zeros stripped for comment display."""
     s = f"{total:.5f}"
     return s.rstrip("0").rstrip(".")
 
 
-def fmt_month_list(months):
+def fmt_month_list(months: list[int]) -> str:
+    """Format a list of month numbers as a comma-separated string.
+
+    Args:
+        months: List of month numbers (1-12).
+
+    Returns:
+        Comma-separated string of month numbers.
+    """
     return ", ".join(str(m) for m in months)
 
 
-def build_header_block(data, schedule_key, schedule):
+def build_header_block(data: dict[str, Any], schedule_key: str, schedule: dict[str, Any]) -> list[str]:
+    """Build YAML comment header lines with rate metadata.
+
+    Args:
+        data: Full rate data dictionary.
+        schedule_key: Schedule identifier (e.g. "d1.1").
+        schedule: Schedule configuration dictionary.
+
+    Returns:
+        List of comment lines for the YAML header.
+    """
     id_ = schedule_key.upper()
     name = schedule["name"]
     total_surcharge = data["pscr"] + (
@@ -79,13 +121,19 @@ def build_header_block(data, schedule_key, schedule):
     ]
 
 
-def write_yaml(path, lines):
+def write_yaml(path: Path, lines: list[str]) -> None:
+    """Write lines to a YAML file.
+
+    Args:
+        path: Output file path.
+        lines: List of lines to write.
+    """
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"  wrote {path}")
 
 
-def generate_d1_1(data, output_dir):
+def generate_d1_1(data: dict[str, Any], output_dir: str | Path) -> None:
     """D1.1: month-based seasons, no TOU."""
     key = "d1.1"
     sched = data["schedules"][key]
@@ -117,7 +165,7 @@ def generate_d1_1(data, output_dir):
     write_yaml(Path(output_dir) / "d1.1.yaml", out)
 
 
-def generate_d1_2(data, output_dir):
+def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
     """D1.2: month-based outer, peak/off-peak inner."""
     key = "d1.2"
     sched = data["schedules"][key]
@@ -189,7 +237,7 @@ def generate_d1_2(data, output_dir):
     write_yaml(Path(output_dir) / "d1.2.yaml", out)
 
 
-def generate_d1_7(data, output_dir):
+def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
     """D1.7: month-based outer, peak/off-peak inner."""
     key = "d1.7"
     sched = data["schedules"][key]
@@ -235,7 +283,7 @@ def generate_d1_7(data, output_dir):
     write_yaml(Path(output_dir) / "d1.7.yaml", out)
 
 
-def generate_d1_11(data, output_dir):
+def generate_d1_11(data: dict[str, Any], output_dir: str | Path) -> None:
     """D1.11: off-peak catch-all, then seasonal peaks (summer implicit via else)."""
     key = "d1.11"
     sched = data["schedules"][key]
@@ -285,7 +333,7 @@ def generate_d1_11(data, output_dir):
     write_yaml(Path(output_dir) / "d1.11.yaml", out)
 
 
-def build_release_notes(data, output_dir):
+def build_release_notes(data: dict[str, Any], output_dir: str | Path) -> None:
     """Write a Markdown release notes file with computed per-schedule totals."""
     rows = []
     for key in ["d1.1", "d1.2", "d1.7", "d1.11"]:
@@ -311,7 +359,8 @@ def build_release_notes(data, output_dir):
     print(f"  wrote {path}")
 
 
-def main():
+def main() -> None:
+    """Entry point: parse arguments and generate HA YAML rate templates."""
     parser = argparse.ArgumentParser(description="Generate HA rate YAML files")
     parser.add_argument(
         "--data-dir",

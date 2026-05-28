@@ -8,11 +8,14 @@ Usage:
     python scripts/update_pscr.py [--pdf-url URL] [--data-dir RATES_DIR]
 """
 
+from __future__ import annotations
+
 import argparse
 import re
 import sys
 import urllib.request
 from pathlib import Path
+from typing import Any, Optional
 
 try:
     import yaml
@@ -38,7 +41,13 @@ MAX_PSCR_CHANGE_RATIO = 0.5  # reject changes larger than ±50% unless --force
 EXPECTED_RESIDENTIAL_SCHEDULES = ("D1.1", "D1.2", "D1.7", "D1.11")
 
 
-def fail(message, hints=None):
+def fail(message: str, hints: Optional[list[str]] = None) -> None:
+    """Print an error message and exit with a non-zero status.
+
+    Args:
+        message: Error message to display.
+        hints: Optional list of hint strings to help debug the issue.
+    """
     print(f"ERROR: {message}", file=sys.stderr)
     if hints:
         print("Hints:", file=sys.stderr)
@@ -47,7 +56,13 @@ def fail(message, hints=None):
     sys.exit(1)
 
 
-def download_pdf(url, dest):
+def download_pdf(url: str, dest: Path) -> None:
+    """Download a PDF from a URL to a local file.
+
+    Args:
+        url: URL to download the PDF from.
+        dest: Local path to save the downloaded PDF.
+    """
     print(f"Downloading {url}...")
     try:
         req = urllib.request.Request(
@@ -73,7 +88,15 @@ def download_pdf(url, dest):
     print(f"  saved {size / 1024 / 1024:.1f} MB to {dest}")
 
 
-def validate_pscr_cents(pscr_cents):
+def validate_pscr_cents(pscr_cents: float) -> None:
+    """Validate that the PSCR factor is within a reasonable range.
+
+    Args:
+        pscr_cents: PSCR factor in cents/kWh.
+
+    Raises:
+        SystemExit: If the value is outside the expected range.
+    """
     if not (MIN_REASONABLE_PSCR_CENTS <= pscr_cents <= MAX_REASONABLE_PSCR_CENTS):
         fail(
             f"Extracted PSCR factor {pscr_cents} cents/kWh is outside the expected "
@@ -86,8 +109,15 @@ def validate_pscr_cents(pscr_cents):
         )
 
 
-def extract_pscr_from_c85_text(text_85):
-    """Extract and validate the common PSCR factor for emitted D1.x schedules."""
+def extract_pscr_from_c85_text(text_85: str) -> float:
+    """Extract and validate the common PSCR factor for emitted D1.x schedules.
+
+    Args:
+        text_85: Extracted text from the C8.5 surcharge summary page.
+
+    Returns:
+        PSCR factor in cents/kWh.
+    """
     row_pattern = re.compile(r"^(D1\.\d+)\s+(.+)$", re.MULTILINE)
     rows_by_schedule = {schedule: [] for schedule in EXPECTED_RESIDENTIAL_SCHEDULES}
 
@@ -142,7 +172,16 @@ def extract_pscr_from_c85_text(text_85):
     return pscr_cents
 
 
-def extract_effective_month(text_62, pscr_cents):
+def extract_effective_month(text_62: str, pscr_cents: float) -> tuple[str, int]:
+    """Extract the effective month and year from the C-62.00 PSCR clause table.
+
+    Args:
+        text_62: Extracted text from the C-62.00 page.
+        pscr_cents: PSCR factor in cents/kWh to match against the table.
+
+    Returns:
+        Tuple of (month_name, year).
+    """
     MONTH_NAMES = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December",
@@ -198,9 +237,15 @@ def extract_effective_month(text_62, pscr_cents):
     return min(matches, key=lambda m: month_order[m[0]])
 
 
-def extract_pscr_from_pdf(pdf_path):
-    """Find C8.5 surcharge table and return (PSCR $/kWh, effective_month_str, year)."""
+def extract_pscr_from_pdf(pdf_path: Path) -> tuple[float, Optional[str], Optional[int]]:
+    """Find C8.5 surcharge table and return (PSCR $/kWh, effective_month_str, year).
 
+    Args:
+        pdf_path: Path to the DTE rate book PDF.
+
+    Returns:
+        Tuple of (pscr_dollars_per_kwh, effective_month_name, effective_year).
+    """
     with pdfplumber.open(pdf_path) as pdf:
         # --- Find PSCR value from C8.5 surcharge table (Sheet C-65.00) ---
         c85_page = None
@@ -236,8 +281,8 @@ def extract_pscr_from_pdf(pdf_path):
                 c62_page = i
                 break
 
-        eff_month_name = None
-        eff_year = None
+        eff_month_name: Optional[str] = None
+        eff_year: Optional[int] = None
         if c62_page is not None:
             text_62 = pdf.pages[c62_page].extract_text()
             eff_month_name, eff_year = extract_effective_month(text_62, pscr_cents)
@@ -254,7 +299,18 @@ def extract_pscr_from_pdf(pdf_path):
         return pscr_dollars, eff_month_name, eff_year
 
 
-def load_data(data_dir):
+def load_data(data_dir: str | Path) -> dict[str, Any]:
+    """Load rate data from a YAML file.
+
+    Args:
+        data_dir: Directory containing data.yaml.
+
+    Returns:
+        Parsed YAML data as a dictionary.
+
+    Raises:
+        SystemExit: If the file is missing, invalid, or lacks the 'pscr' key.
+    """
     path = Path(data_dir) / "data.yaml"
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -268,15 +324,27 @@ def load_data(data_dir):
     return data
 
 
-def save_data(data_dir, data):
+def save_data(data_dir: str | Path, data: dict[str, Any]) -> None:
+    """Save rate data to a YAML file.
+
+    Args:
+        data_dir: Directory containing data.yaml.
+        data: Dictionary to serialize as YAML.
+    """
     path = Path(data_dir) / "data.yaml"
     with open(path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, default_flow_style=None, sort_keys=False)
     print(f"  updated {path}")
 
 
-def run_generator(data_dir, output_dir, release_notes=False):
-    """Re-run the HA YAML generator."""
+def run_generator(data_dir: Path, output_dir: str, release_notes: bool = False) -> None:
+    """Re-run the HA YAML generator.
+
+    Args:
+        data_dir: Directory containing data.yaml.
+        output_dir: Output directory for HA YAML files.
+        release_notes: Whether to also generate RELEASE_NOTES.md.
+    """
     import subprocess
     import os
 
@@ -297,8 +365,14 @@ def run_generator(data_dir, output_dir, release_notes=False):
         sys.exit(result.returncode)
 
 
-def check_pscr_delta(old_pscr, new_pscr, force=False):
-    """Reject implausibly large PSCR swings unless --force is set."""
+def check_pscr_delta(old_pscr: float, new_pscr: float, force: bool = False) -> None:
+    """Reject implausibly large PSCR swings unless --force is set.
+
+    Args:
+        old_pscr: Previous PSCR factor in $/kWh.
+        new_pscr: New PSCR factor in $/kWh.
+        force: If True, skip the sanity check.
+    """
     if old_pscr <= 0:
         return
     change_ratio = abs(new_pscr - old_pscr) / old_pscr
@@ -313,7 +387,8 @@ def check_pscr_delta(old_pscr, new_pscr, force=False):
         )
 
 
-def main():
+def main() -> None:
+    """Entry point: parse arguments, extract PSCR from PDF, and update data."""
     parser = argparse.ArgumentParser(description="Update PSCR factor from DTE rate book PDF")
     parser.add_argument(
         "--pdf-url", default=DEFAULT_PDF_URL,
