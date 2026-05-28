@@ -46,7 +46,7 @@ template:
             {% else %}
               0.05059
             {% endif %}
-          {% elif month in [6, 7, 8, 9, 10] %}
+          {% else %}
             {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
               0.15369
             {% else %}

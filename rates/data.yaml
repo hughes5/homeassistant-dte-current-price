@@ -18,6 +18,12 @@ schedules:
       non_capacity: 0.04535
   d1.2:
     name: D1.2 Enhanced Time-of-Use
+    # Sell-back estimate for net metering, not derived from tariff marginal-cost accounting.
+    outflow_rates:
+      winter_peak: 0.1321
+      winter_off_peak: 0.05059
+      summer_peak: 0.15369
+      summer_off_peak: 0.05265
     conditions:
     - name: winter_peak
       months: [11, 12, 1, 2, 3, 4, 5]

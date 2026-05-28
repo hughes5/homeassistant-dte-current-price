@@ -165,6 +165,7 @@ def generate_d1_2(data, output_dir):
     out.append("          {% endif %}")
 
     # D1.2 Outflow sensor (sell-back estimate, not from tariff components)
+    outflow = sched.get("outflow_rates", {})
     out.append("  - sensor:")
     out.append('      - name: "D1.2 Outflow"')
     out.append('        unique_id: "d1_2_outflow"')
@@ -175,17 +176,21 @@ def generate_d1_2(data, output_dir):
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
-    out.append("          {% if month in [11, 12, 1, 2, 3, 4, 5] %}")
-    out.append("            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}")
-    out.append("              0.1321")
+    out.append(f"          {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(
+        f"            {{% if hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"              {outflow.get('winter_peak', 'unknown')}")
     out.append("            {% else %}")
-    out.append("              0.05059")
+    out.append(f"              {outflow.get('winter_off_peak', 'unknown')}")
     out.append("            {% endif %}")
-    out.append("          {% elif month in [6, 7, 8, 9, 10] %}")
-    out.append("            {% if hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}")
-    out.append("              0.15369")
+    out.append("          {% else %}")
+    out.append(
+        f"            {{% if hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+    )
+    out.append(f"              {outflow.get('summer_peak', 'unknown')}")
     out.append("            {% else %}")
-    out.append("              0.05265")
+    out.append(f"              {outflow.get('summer_off_peak', 'unknown')}")
     out.append("            {% endif %}")
     out.append("          {% endif %}")
 
