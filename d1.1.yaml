@@ -15,7 +15,7 @@ template:
              for source data and automated rate updates.
           #}
           {% set month = now().month %}
-          {% if month in [11, 12, 1, 2, 3, 4, 5] %}
+          {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
             {{ 0.18002 }}
           {% else %}
             {{ 0.20132 }}
