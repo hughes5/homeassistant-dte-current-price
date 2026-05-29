@@ -9,7 +9,6 @@ on:
         description: "Create or update release assets even when rates are unchanged"
         type: boolean
         default: false
-  pull_request:
 
 permissions:
   contents: write
@@ -39,12 +38,10 @@ jobs:
         run: pytest tests/ -v
 
       - name: Update PSCR from rate book PDF
-        if: github.event_name != 'pull_request'
         id: update
         run: python scripts/update_pscr.py --release-notes
 
       - name: Read PSCR metadata
-        if: github.event_name != 'pull_request'
         id: effective-date
         run: |
           tag_suffix=$(python3 -c "import yaml; print(yaml.safe_load(open('pscr_metadata.yaml'))['tag_suffix'])")
@@ -53,7 +50,6 @@ jobs:
           echo "name=$name_str" >> "$GITHUB_OUTPUT"
 
       - name: Commit changes
-        if: github.event_name != 'pull_request'
         uses: stefanzweifel/git-auto-commit-action@v5
         id: auto-commit
         with:
@@ -63,7 +59,6 @@ jobs:
           commit_author: "hughes5 <6740468+hughes5@users.noreply.github.com>"
 
       - name: Check for any existing release
-        if: github.event_name != 'pull_request'
         id: check-release
         run: |
           count=$(gh release list --json tagName --jq 'length' 2>/dev/null || echo "0")
@@ -76,7 +71,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Create release
-        if: github.event_name != 'pull_request' && (steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false' || inputs.publish_release_assets)
+        if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false' || inputs.publish_release_assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: pscr-${{ steps.effective-date.outputs.tag_suffix }}
