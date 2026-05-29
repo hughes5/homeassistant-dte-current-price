@@ -108,7 +108,7 @@ jobs:
 
       - name: Create release
         if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false' || inputs.publish_release_assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: pscr-${{ steps.effective-date.outputs.tag_suffix }}
           name: "PSCR Update — ${{ steps.effective-date.outputs.name }}"
