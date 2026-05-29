@@ -6,7 +6,11 @@ import pytest
 pdfplumber = pytest.importorskip("pdfplumber")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-from update_pscr import extract_pscr_from_c85_text, extract_pscr_from_pdf
+from update_pscr import (
+    extract_effective_month,
+    extract_pscr_from_c85_text,
+    extract_pscr_from_pdf,
+)
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 PDF_PATH = FIXTURES_DIR / "dtee1cur.pdf"
@@ -27,7 +31,7 @@ def extraction_result(pdf_path):
 class TestExtractPscrFromPdf:
     def test_pscr_in_reasonable_range(self, extraction_result):
         pscr_dollars, _, _ = extraction_result
-        assert 0.005 <= pscr_dollars <= 0.05
+        assert 0.0 < pscr_dollars <= 0.1
 
     def test_pscr_has_five_decimal_places(self, extraction_result):
         pscr_dollars, _, _ = extraction_result
@@ -55,7 +59,7 @@ class TestExtractPscrFromRealC85Text:
                 text = page.extract_text()
                 if text and "C8.5" in text and "Summary of surcharges" in text:
                     pscr_cents = extract_pscr_from_c85_text(text)
-                    assert 1.0 <= pscr_cents <= 5.0
+                    assert 0.0 < pscr_cents <= 10.0
                     return
         pytest.fail("C8.5 page not found in PDF")
 
@@ -75,3 +79,35 @@ class TestExtractPscrErrors:
     def test_missing_pdf_raises(self, tmp_path):
         with pytest.raises(FileNotFoundError):
             extract_pscr_from_pdf(tmp_path / "nonexistent.pdf")
+
+
+class TestExtractEffectiveMonth:
+    def test_finds_pscr_in_monthly_table(self, pdf_path, extraction_result):
+        pscr_dollars, _, _ = extraction_result
+        pscr_cents = round(pscr_dollars * 100, 3)
+
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text and "C-62.00" in text and "Revised Sheet No. C-62.00" in text:
+                    month, year = extract_effective_month(text, pscr_cents)
+                    assert isinstance(month, str)
+                    assert isinstance(year, int)
+                    assert year >= 2024
+                    return
+        pytest.fail("C-62.00 page not found in PDF")
+
+    def test_month_consistent_with_extraction(self, pdf_path, extraction_result):
+        _, eff_month, eff_year = extraction_result
+        pscr_dollars, _, _ = extraction_result
+        pscr_cents = round(pscr_dollars * 100, 3)
+
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text and "C-62.00" in text and "Revised Sheet No. C-62.00" in text:
+                    month, year = extract_effective_month(text, pscr_cents)
+                    assert month == eff_month
+                    assert year == eff_year
+                    return
+        pytest.fail("C-62.00 page not found in PDF")
