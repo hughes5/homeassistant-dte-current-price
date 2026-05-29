@@ -1,10 +1,4 @@
-import sys
-from pathlib import Path
-
 import pytest
-import yaml
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from generate_rates import (
     build_header_block,
     compute_total,
@@ -33,7 +27,8 @@ def data():
             "d1.1": {
                 "name": "D1.1 Interruptible Space Conditioning",
                 "conditions": [
-                    {"name": "winter", "months": [10, 11, 12, 1, 2, 3, 4, 5], "capacity": 0.00702, "non_capacity": 0.04535},
+                    {"name": "winter", "months": [10, 11, 12, 1, 2, 3, 4, 5],
+                     "capacity": 0.00702, "non_capacity": 0.04535},
                     {"name": "summer", "months": [6, 7, 8, 9], "capacity": 0.02832, "non_capacity": 0.04535},
                 ],
             },

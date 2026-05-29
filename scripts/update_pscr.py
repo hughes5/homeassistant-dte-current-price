@@ -15,7 +15,9 @@ import re
 import sys
 import urllib.request
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+
+from common import load_data
 
 try:
     import yaml
@@ -41,7 +43,7 @@ MAX_PSCR_CHANGE_RATIO = 0.5  # reject changes larger than ±50% unless --force
 EXPECTED_RESIDENTIAL_SCHEDULES = ("D1.1", "D1.2", "D1.7", "D1.11")
 
 
-def fail(message: str, hints: Optional[list[str]] = None) -> None:
+def fail(message: str, hints: list[str] | None = None) -> None:
     """Print an error message and exit with a non-zero status.
 
     Args:
@@ -141,7 +143,8 @@ def extract_pscr_from_c85_text(text_85: str) -> float:
             [
                 "The PDF table text extraction or C8.5 row format may have changed.",
                 "If this repository starts or stops generating a schedule, update EXPECTED_RESIDENTIAL_SCHEDULES.",
-                "Inspect the C8.5 page text printed by adding a temporary debug dump around extract_pscr_from_c85_text().",
+                "Inspect the C8.5 page text printed by adding a temporary"
+                " debug dump around extract_pscr_from_c85_text().",
             ],
         )
 
@@ -182,12 +185,12 @@ def extract_effective_month(text_62: str, pscr_cents: float) -> tuple[str, int]:
     Returns:
         Tuple of (month_name, year).
     """
-    MONTH_NAMES = [
+    month_names = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December",
     ]
-    month_order = {name: i + 1 for i, name in enumerate(MONTH_NAMES)}
-    MONTH_PAT = "|".join(MONTH_NAMES)
+    month_order = {name: i + 1 for i, name in enumerate(month_names)}
+    month_pat = "|".join(month_names)
     header_match = re.search(r"((?:20\d{2}\s+){1,}20\d{2})", text_62)
     if not header_match:
         fail(
@@ -205,7 +208,7 @@ def extract_effective_month(text_62: str, pscr_cents: float) -> tuple[str, int]:
             ["Update extract_effective_month() if the PSCR table no longer has paired yearly columns."],
         )
 
-    row_pattern = re.compile(rf"({MONTH_PAT})\s+((?:\d+\.\d+\s+){{{len(years) * 2 - 1}}}\d+\.\d+)")
+    row_pattern = re.compile(rf"({month_pat})\s+((?:\d+\.\d+\s+){{{len(years) * 2 - 1}}}\d+\.\d+)")
     latest_year = years[-1]
     latest_year_index = len(years) - 1
     matches = []
@@ -237,7 +240,7 @@ def extract_effective_month(text_62: str, pscr_cents: float) -> tuple[str, int]:
     return min(matches, key=lambda m: month_order[m[0]])
 
 
-def extract_pscr_from_pdf(pdf_path: Path) -> tuple[float, Optional[str], Optional[int]]:
+def extract_pscr_from_pdf(pdf_path: Path) -> tuple[float, str | None, int | None]:
     """Find C8.5 surcharge table and return (PSCR $/kWh, effective_month_str, year).
 
     Args:
@@ -281,8 +284,8 @@ def extract_pscr_from_pdf(pdf_path: Path) -> tuple[float, Optional[str], Optiona
                 c62_page = i
                 break
 
-        eff_month_name: Optional[str] = None
-        eff_year: Optional[int] = None
+        eff_month_name: str | None = None
+        eff_year: int | None = None
         if c62_page is not None:
             text_62 = pdf.pages[c62_page].extract_text()
             eff_month_name, eff_year = extract_effective_month(text_62, pscr_cents)
@@ -298,30 +301,6 @@ def extract_pscr_from_pdf(pdf_path: Path) -> tuple[float, Optional[str], Optiona
 
         return pscr_dollars, eff_month_name, eff_year
 
-
-def load_data(data_dir: str | Path) -> dict[str, Any]:
-    """Load rate data from a YAML file.
-
-    Args:
-        data_dir: Directory containing data.yaml.
-
-    Returns:
-        Parsed YAML data as a dictionary.
-
-    Raises:
-        SystemExit: If the file is missing, invalid, or lacks the 'pscr' key.
-    """
-    path = Path(data_dir) / "data.yaml"
-    with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
-    if not isinstance(data, dict):
-        print(f"ERROR: {path} is empty or not a valid YAML mapping")
-        sys.exit(1)
-    if "pscr" not in data:
-        fail(f"{path} missing required key 'pscr'")
-
-    return data
 
 
 def save_data(data_dir: str | Path, data: dict[str, Any]) -> None:
@@ -345,8 +324,8 @@ def run_generator(data_dir: Path, output_dir: str, release_notes: bool = False) 
         output_dir: Output directory for HA YAML files.
         release_notes: Whether to also generate RELEASE_NOTES.md.
     """
-    import subprocess
     import os
+    import subprocess
 
     gen = Path(__file__).parent / "generate_rates.py"
     cmd = [

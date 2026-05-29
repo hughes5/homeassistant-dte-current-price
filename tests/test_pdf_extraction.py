@@ -1,12 +1,9 @@
-import sys
 from pathlib import Path
 
 import pytest
 
 pdfplumber = pytest.importorskip("pdfplumber")
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-from update_pscr import (
+from update_pscr import (  # noqa: E402
     extract_effective_month,
     extract_pscr_from_c85_text,
     extract_pscr_from_pdf,

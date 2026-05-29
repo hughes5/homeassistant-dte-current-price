@@ -15,40 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-try:
-    import yaml
-except ImportError:
-    print("PyYAML is required. Install with: pip install pyyaml")
-    sys.exit(1)
-
-
-def load_data(data_dir: str | Path) -> dict[str, Any]:
-    """Load and validate the rate data from a YAML file.
-
-    Args:
-        data_dir: Directory containing data.yaml.
-
-    Returns:
-        Parsed YAML data as a dictionary.
-
-    Raises:
-        SystemExit: If the file is missing, invalid, or lacks required keys.
-    """
-    path = Path(data_dir) / "data.yaml"
-    with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
-    if not isinstance(data, dict):
-        print(f"ERROR: {path} is empty or not a valid YAML mapping")
-        sys.exit(1)
-
-    required_keys = {"pscr", "securitization", "delivery_surcharge", "distribution", "schedules"}
-    missing = required_keys - set(data.keys())
-    if missing:
-        print(f"ERROR: {path} missing required keys: {', '.join(sorted(missing))}")
-        sys.exit(1)
-
-    return data
+from common import load_data
 
 
 def compute_total(data: dict[str, Any], schedule_key: str, condition: dict[str, Any]) -> float:
@@ -154,7 +121,7 @@ def generate_d1_1(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.extend("          " + line for line in build_header_block(data, key, sched))
     out.append("          {% set month = now().month %}")
     out.append(f"          {{% if month in [{fmt_month_list(winter['months'])}] %}}")
     out.append(f"            {{{{ {winter_total} }}}}")
@@ -190,25 +157,27 @@ def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.extend("          " + line for line in build_header_block(data, key, sched))
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
     out.append(
-        f"          {{% if month in [{fmt_month_list(wp['months'])}] and hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+        f"          {{% if month in [{fmt_month_list(wp['months'])}]"
+        f" and hour >= {wp_h['start']} and hour < {wp_h['end']}"
+        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
     )
     out.append(f"            {{{{ {wp_total} }}}}")
     out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
     out.append(f"            {{{{ {wop_total} }}}}")
     out.append(
-        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']}"
+        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
     )
     out.append(f"            {{{{ {sp_total} }}}}")
     out.append("          {% else %}")
     out.append(f"            {{{{ {sop_total} }}}}")
     out.append("          {% endif %}")
 
-    # D1.2 Outflow sensor (sell-back estimate, not from tariff components)
     outflow = sched.get("outflow_rates", {})
     out.append("  - sensor:")
     out.append('      - name: "D1.2 Outflow"')
@@ -216,12 +185,17 @@ def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.append("          {# This outflow rate is a sell-back estimate and is not derived from the D1.2 tariff marginal-cost accounting above. #}")
+    out.append(
+        "          {# This outflow rate is a sell-back estimate and is not"
+        " derived from the D1.2 tariff marginal-cost accounting above. #}"
+    )
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
     out.append(
-        f"          {{% if month in [{fmt_month_list(wp['months'])}] and hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+        f"          {{% if month in [{fmt_month_list(wp['months'])}]"
+        f" and hour >= {wp_h['start']} and hour < {wp_h['end']}"
+        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
     )
     out.append(f"            {outflow.get('winter_peak', 'unknown')}")
     out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
@@ -262,12 +236,14 @@ def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.extend("          " + line for line in build_header_block(data, key, sched))
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")
     out.append(
-        f"          {{% if month in [{fmt_month_list(wp['months'])}] and hour >= {wp_h['start']} and hour < {wp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
+        f"          {{% if month in [{fmt_month_list(wp['months'])}]"
+        f" and hour >= {wp_h['start']} and hour < {wp_h['end']}"
+        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
     )
     out.append(f"            {{{{ {wp_total} }}}}")
     out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
@@ -310,7 +286,7 @@ def generate_d1_11(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.extend("          " + l for l in build_header_block(data, key, sched))
+    out.extend("          " + line for line in build_header_block(data, key, sched))
     out.append("          {% set month = now().month %}")
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append("          {% set hour = now().hour %}")

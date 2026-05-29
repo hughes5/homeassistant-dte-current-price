@@ -1,9 +1,4 @@
-import sys
-from pathlib import Path
-
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from update_pscr import check_pscr_delta, extract_pscr_from_c85_text, validate_pscr_cents
 
 
