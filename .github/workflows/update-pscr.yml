@@ -37,9 +37,38 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v
 
+      - name: Save current PDF hash
+        id: old-pdf
+        run: |
+          if [ -f tests/fixtures/dtee1cur.pdf ]; then
+            echo "hash=$(sha256sum tests/fixtures/dtee1cur.pdf | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          else
+            echo "hash=none" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Update PSCR from rate book PDF
         id: update
         run: python scripts/update_pscr.py --release-notes
+
+      - name: Validate live PDF against tests
+        run: |
+          cp /tmp/dtee1cur.pdf tests/fixtures/dtee1cur.pdf
+          pytest tests/test_pdf_extraction.py -v
+
+      - name: Check for changes
+        id: changed
+        run: |
+          new_hash=$(sha256sum tests/fixtures/dtee1cur.pdf | cut -d' ' -f1)
+          if [ "${{ steps.old-pdf.outputs.hash }}" = "$new_hash" ]; then
+            echo "pdf=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pdf=true" >> "$GITHUB_OUTPUT"
+          fi
+          if git diff --quiet rates/data.yaml; then
+            echo "pscr=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pscr=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Read PSCR metadata
         id: effective-date
@@ -69,6 +98,13 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Summary
+        run: |
+          echo "### PSCR Update Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PDF changed: ${{ steps.changed.outputs.pdf }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PSCR changed: ${{ steps.changed.outputs.pscr }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Committed: ${{ steps.auto-commit.outputs.changes_detected }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create release
         if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false' || inputs.publish_release_assets
