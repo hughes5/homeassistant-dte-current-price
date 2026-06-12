@@ -15,16 +15,18 @@ template:
              for source data and automated rate updates.
           #}
           {% set month = now().month %}
-          {% set day_of_week = now().isoweekday() %}
-          {% set hour = now().hour %}
-          {% if month in [10, 11, 12, 1, 2, 3, 4, 5] and hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-            {{ 0.26427 }}
-          {% elif month in [10, 11, 12, 1, 2, 3, 4, 5] %}
-            {{ 0.17981 }}
-          {% elif hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-            {{ 0.28943 }}
+          {% if is_state('binary_sensor.d1_2_peak_hours', 'on') %}
+            {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+              {{ 0.26427 }}
+            {% else %}
+              {{ 0.28943 }}
+            {% endif %}
           {% else %}
-            {{ 0.18196 }}
+            {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+              {{ 0.17981 }}
+            {% else %}
+              {{ 0.18196 }}
+            {% endif %}
           {% endif %}
   - sensor:
       - name: "D1.2 Outflow"
@@ -34,14 +36,24 @@ template:
         state: >
           {# This outflow rate is a sell-back estimate and is not derived from the D1.2 tariff marginal-cost accounting above. #}
           {% set month = now().month %}
-          {% set day_of_week = now().isoweekday() %}
-          {% set hour = now().hour %}
-          {% if month in [10, 11, 12, 1, 2, 3, 4, 5] and hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-            0.1321
-          {% elif month in [10, 11, 12, 1, 2, 3, 4, 5] %}
-            0.05059
-          {% elif hour >= 11 and hour < 19 and day_of_week in [1, 2, 3, 4, 5] %}
-            0.15369
+          {% if is_state('binary_sensor.d1_2_peak_hours', 'on') %}
+            {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+              0.1321
+            {% else %}
+              0.15369
+            {% endif %}
           {% else %}
-            0.05265
+            {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+              0.05059
+            {% else %}
+              0.05265
+            {% endif %}
           {% endif %}
+  - binary_sensor:
+      - name: "D1.2 Peak Hours"
+        unique_id: "d1_2_peak_hours"
+        device_class: power
+        state: >
+          {% set hour = now().hour %}
+          {% set day_of_week = now().isoweekday() %}
+          {{ day_of_week in [1,2,3,4,5] and hour >= 11 and hour < 19 }}

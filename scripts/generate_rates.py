@@ -159,23 +159,18 @@ def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("        state: >")
     out.extend("          " + line for line in build_header_block(data, key, sched))
     out.append("          {% set month = now().month %}")
-    out.append("          {% set day_of_week = now().isoweekday() %}")
-    out.append("          {% set hour = now().hour %}")
-    out.append(
-        f"          {{% if month in [{fmt_month_list(wp['months'])}]"
-        f" and hour >= {wp_h['start']} and hour < {wp_h['end']}"
-        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"            {{{{ {wp_total} }}}}")
-    out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
-    out.append(f"            {{{{ {wop_total} }}}}")
-    out.append(
-        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']}"
-        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"            {{{{ {sp_total} }}}}")
+    out.append("          {% if is_state('binary_sensor.d1_2_peak_hours', 'on') %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {{{{ {wp_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {sp_total} }}}}")
+    out.append("            {% endif %}")
     out.append("          {% else %}")
-    out.append(f"            {{{{ {sop_total} }}}}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {{{{ {wop_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {sop_total} }}}}")
+    out.append("            {% endif %}")
     out.append("          {% endif %}")
 
     outflow = sched.get("outflow_rates", {})
@@ -190,23 +185,30 @@ def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
         " derived from the D1.2 tariff marginal-cost accounting above. #}"
     )
     out.append("          {% set month = now().month %}")
-    out.append("          {% set day_of_week = now().isoweekday() %}")
-    out.append("          {% set hour = now().hour %}")
-    out.append(
-        f"          {{% if month in [{fmt_month_list(wp['months'])}]"
-        f" and hour >= {wp_h['start']} and hour < {wp_h['end']}"
-        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"            {outflow.get('winter_peak', 'unknown')}")
-    out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
-    out.append(f"            {outflow.get('winter_off_peak', 'unknown')}")
-    out.append(
-        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"            {outflow.get('summer_peak', 'unknown')}")
+    out.append("          {% if is_state('binary_sensor.d1_2_peak_hours', 'on') %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {outflow.get('winter_peak', 'unknown')}")
+    out.append("            {% else %}")
+    out.append(f"              {outflow.get('summer_peak', 'unknown')}")
+    out.append("            {% endif %}")
     out.append("          {% else %}")
-    out.append(f"            {outflow.get('summer_off_peak', 'unknown')}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {outflow.get('winter_off_peak', 'unknown')}")
+    out.append("            {% else %}")
+    out.append(f"              {outflow.get('summer_off_peak', 'unknown')}")
+    out.append("            {% endif %}")
     out.append("          {% endif %}")
+
+    min_start = min(wp_h['start'], sp_h['start'])
+    max_end = max(wp_h['end'], sp_h['end'])
+    out.append("  - binary_sensor:")
+    out.append('      - name: "D1.2 Peak Hours"')
+    out.append('        unique_id: "d1_2_peak_hours"')
+    out.append("        device_class: power")
+    out.append("        state: >")
+    out.append("          {% set hour = now().hour %}")
+    out.append("          {% set day_of_week = now().isoweekday() %}")
+    out.append(f"          {{{{ day_of_week in [1,2,3,4,5] and hour >= {min_start} and hour < {max_end} }}}}")
 
     write_yaml(Path(output_dir) / "d1.2.yaml", out)
 
@@ -238,23 +240,30 @@ def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("        state: >")
     out.extend("          " + line for line in build_header_block(data, key, sched))
     out.append("          {% set month = now().month %}")
-    out.append("          {% set day_of_week = now().isoweekday() %}")
-    out.append("          {% set hour = now().hour %}")
-    out.append(
-        f"          {{% if month in [{fmt_month_list(wp['months'])}]"
-        f" and hour >= {wp_h['start']} and hour < {wp_h['end']}"
-        f" and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"            {{{{ {wp_total} }}}}")
-    out.append(f"          {{% elif month in [{fmt_month_list(wp['months'])}] %}}")
-    out.append(f"            {{{{ {wop_total} }}}}")
-    out.append(
-        f"          {{% elif hour >= {sp_h['start']} and hour < {sp_h['end']} and day_of_week in [1, 2, 3, 4, 5] %}}"
-    )
-    out.append(f"            {{{{ {sp_total} }}}}")
+    out.append("          {% if is_state('binary_sensor.d1_7_peak_hours', 'on') %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {{{{ {wp_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {sp_total} }}}}")
+    out.append("            {% endif %}")
     out.append("          {% else %}")
-    out.append(f"            {{{{ {sop_total} }}}}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {{{{ {wop_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {sop_total} }}}}")
+    out.append("            {% endif %}")
     out.append("          {% endif %}")
+
+    min_start = min(wp_h['start'], sp_h['start'])
+    max_end = max(wp_h['end'], sp_h['end'])
+    out.append("  - binary_sensor:")
+    out.append('      - name: "D1.7 Peak Hours"')
+    out.append('        unique_id: "d1_7_peak_hours"')
+    out.append("        device_class: power")
+    out.append("        state: >")
+    out.append("          {% set hour = now().hour %}")
+    out.append("          {% set day_of_week = now().isoweekday() %}")
+    out.append(f"          {{{{ day_of_week in [1,2,3,4,5] and hour >= {min_start} and hour < {max_end} }}}}")
 
     write_yaml(Path(output_dir) / "d1.7.yaml", out)
 
@@ -288,23 +297,24 @@ def generate_d1_11(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("        state: >")
     out.extend("          " + line for line in build_header_block(data, key, sched))
     out.append("          {% set month = now().month %}")
-    out.append("          {% set day_of_week = now().isoweekday() %}")
-    out.append("          {% set hour = now().hour %}")
-    out.append("          {# Off peak: weekends & non-peak hours #}")
-    out.append(
-        f"          {{% if hour < {min_start} or hour >= {max_end} or day_of_week in [6, 7] %}}"
-    )
-    out.append(f"            {{{{ {off_peak_total} }}}}")
-    months_str = fmt_month_list(wp_cond['months'])
-    out.append(f"          {{# Winter peak: {months_str}, M-F {min_start}-{max_end} #}}")
-    out.append(
-        f"          {{% elif month in [{fmt_month_list(wp_cond['months'])}] %}}"
-    )
-    out.append(f"            {{{{ {wp_total} }}}}")
-    out.append(f"          {{# Summer peak: remaining months, M-F {min_start}-{max_end} #}}")
+    out.append("          {% if is_state('binary_sensor.d1_11_peak_hours', 'on') %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp_cond['months'])}] %}}")
+    out.append(f"              {{{{ {wp_total} }}}}")
+    out.append("            {% else %}")
+    out.append(f"              {{{{ {sp_total} }}}}")
+    out.append("            {% endif %}")
     out.append("          {% else %}")
-    out.append(f"            {{{{ {sp_total} }}}}")
+    out.append(f"            {{{{ {off_peak_total} }}}}")
     out.append("          {% endif %}")
+
+    out.append("  - binary_sensor:")
+    out.append('      - name: "D1.11 Peak Hours"')
+    out.append('        unique_id: "d1_11_peak_hours"')
+    out.append("        device_class: power")
+    out.append("        state: >")
+    out.append("          {% set hour = now().hour %}")
+    out.append("          {% set day_of_week = now().isoweekday() %}")
+    out.append(f"          {{{{ day_of_week in [1,2,3,4,5] and hour >= {min_start} and hour < {max_end} }}}}")
 
     write_yaml(Path(output_dir) / "d1.11.yaml", out)
 

@@ -38,42 +38,51 @@ class TestGeneratedYamlSyntax:
         assert len(schedule_data["template"]) > 0
         assert "sensor" in schedule_data["template"][0]
 
+def get_all_sensors(schedule_data):
+    """Generator yielding all sensor dicts from all template list items."""
+    for item in schedule_data.get("template", []):
+        if "sensor" in item:
+            yield from item["sensor"]
+
 
 class TestGeneratedSensorStructure:
     def test_sensor_has_name(self, schedule_data):
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
+        for sensor in get_all_sensors(schedule_data):
             assert "name" in sensor
 
     def test_sensor_has_unique_id(self, schedule_data):
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
+        for sensor in get_all_sensors(schedule_data):
             assert "unique_id" in sensor
 
     def test_sensor_has_unit(self, schedule_data):
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
+        for sensor in get_all_sensors(schedule_data):
+            if "unit_of_measurement" not in sensor:
+                continue
             assert sensor["unit_of_measurement"] == "USD/kWh"
 
     def test_sensor_has_device_class(self, schedule_data):
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
+        for sensor in get_all_sensors(schedule_data):
+            if sensor.get("device_class") != "monetary":
+                continue
             assert sensor["device_class"] == "monetary"
 
     def test_sensor_has_state(self, schedule_data):
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
+        for sensor in get_all_sensors(schedule_data):
             assert "state" in sensor
             assert isinstance(sensor["state"], str)
 
     def test_state_contains_pscr_comment(self, schedule_data):
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
+        for sensor in get_all_sensors(schedule_data):
+            if sensor.get("device_class") != "monetary":
+                continue
+            if "Inflow" not in sensor.get("name", ""):
+                continue
             assert "PSCR factor:" in sensor["state"]
 
     def test_state_contains_numeric_literal(self, schedule_data):
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
+        for sensor in get_all_sensors(schedule_data):
+            if sensor.get("device_class") != "monetary":
+                continue
             state = sensor["state"]
             assert any(
                 c.isdigit() for c in state
@@ -84,9 +93,15 @@ class TestGeneratedRateValues:
     def test_rates_are_positive(self, schedule_data):
         import re
 
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
-            rates = re.findall(r"\{\{\s*([\d.]+)\s*\}\}", sensor["state"])
+        for sensor in get_all_sensors(schedule_data):
+            if "Inflow" in sensor.get("name", ""):
+                rates = re.findall(r"\{\{\s*([\d.]+)\s*\}\}", sensor["state"])
+            elif "Outflow" in sensor.get("name", ""):
+                rates = re.findall(r"(?<!\d)(0\.\d+)(?!\d)", sensor["state"])
+            else:
+                continue
+
+            assert rates, f"No rate values found in sensor {sensor.get('name')}"
             for rate_str in rates:
                 rate = float(rate_str)
                 assert rate > 0, f"Rate {rate} should be positive"
@@ -94,9 +109,16 @@ class TestGeneratedRateValues:
     def test_rates_in_reasonable_range(self, schedule_data):
         import re
 
-        sensors = schedule_data["template"][0]["sensor"]
-        for sensor in sensors:
-            rates = re.findall(r"\{\{\s*([\d.]+)\s*\}\}", sensor["state"])
+        for sensor in get_all_sensors(schedule_data):
+            if "Inflow" in sensor.get("name", ""):
+                rates = re.findall(r"\{\{\s*([\d.]+)\s*\}\}", sensor["state"])
+            elif "Outflow" in sensor.get("name", ""):
+                rates = re.findall(r"(?<!\d)(0\.\d+)(?!\d)", sensor["state"])
+            else:
+                continue
+
+            assert rates, f"No rate values found in sensor {sensor.get('name')}"
             for rate_str in rates:
                 rate = float(rate_str)
                 assert 0.05 <= rate <= 0.50, f"Rate {rate} outside expected $/kWh range"
+

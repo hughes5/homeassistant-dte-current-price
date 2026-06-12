@@ -15,15 +15,20 @@ template:
              for source data and automated rate updates.
           #}
           {% set month = now().month %}
-          {% set day_of_week = now().isoweekday() %}
-          {% set hour = now().hour %}
-          {# Off peak: weekends & non-peak hours #}
-          {% if hour < 15 or hour >= 19 or day_of_week in [6, 7] %}
-            {{ 0.21539 }}
-          {# Winter peak: 10, 11, 12, 1, 2, 3, 4, 5, M-F 15-19 #}
-          {% elif month in [10, 11, 12, 1, 2, 3, 4, 5] %}
-            {{ 0.23149 }}
-          {# Summer peak: remaining months, M-F 15-19 #}
+          {% if is_state('binary_sensor.d1_11_peak_hours', 'on') %}
+            {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+              {{ 0.23149 }}
+            {% else %}
+              {{ 0.27237 }}
+            {% endif %}
           {% else %}
-            {{ 0.27237 }}
+            {{ 0.21539 }}
           {% endif %}
+  - binary_sensor:
+      - name: "D1.11 Peak Hours"
+        unique_id: "d1_11_peak_hours"
+        device_class: power
+        state: >
+          {% set hour = now().hour %}
+          {% set day_of_week = now().isoweekday() %}
+          {{ day_of_week in [1,2,3,4,5] and hour >= 15 and hour < 19 }}
