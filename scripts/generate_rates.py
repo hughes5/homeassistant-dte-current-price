@@ -129,6 +129,24 @@ def generate_d1_1(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append(f"            {{{{ {summer_total} }}}}")
     out.append("          {% endif %}")
 
+    outflow = sched.get("outflow_rates", {})
+    out.append("  - sensor:")
+    out.append('      - name: "D1.1 Outflow"')
+    out.append('        unique_id: "d1_1_outflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.append(
+        "          {# Rider 18 outflow credit = power supply + PSCR,"
+        " per DTE Rate Book Sheet D-115.00. #}"
+    )
+    out.append("          {% set month = now().month %}")
+    out.append(f"          {{% if month in [{fmt_month_list(winter['months'])}] %}}")
+    out.append(f"            {outflow.get('winter', 'unknown')}")
+    out.append("          {% else %}")
+    out.append(f"            {outflow.get('summer', 'unknown')}")
+    out.append("          {% endif %}")
+
     write_yaml(Path(output_dir) / "d1.1.yaml", out)
 
 
@@ -181,8 +199,8 @@ def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("        device_class: monetary")
     out.append("        state: >")
     out.append(
-        "          {# This outflow rate is a sell-back estimate and is not"
-        " derived from the D1.2 tariff marginal-cost accounting above. #}"
+        "          {# Rider 18 outflow credit = power supply"
+        " (capacity + non-capacity) + PSCR, per DTE Rate Book Sheet D-115.00. #}"
     )
     out.append("          {% set month = now().month %}")
     out.append("          {% if is_state('binary_sensor.d1_2_peak_hours', 'on') %}")
@@ -254,6 +272,32 @@ def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("            {% endif %}")
     out.append("          {% endif %}")
 
+    outflow = sched.get("outflow_rates", {})
+    out.append("  - sensor:")
+    out.append('      - name: "D1.7 Outflow"')
+    out.append('        unique_id: "d1_7_outflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.append(
+        "          {# Rider 18 outflow credit = power supply + PSCR,"
+        " per DTE Rate Book Sheet D-115.00. #}"
+    )
+    out.append("          {% set month = now().month %}")
+    out.append("          {% if is_state('binary_sensor.d1_7_peak_hours', 'on') %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {outflow.get('winter_peak', 'unknown')}")
+    out.append("            {% else %}")
+    out.append(f"              {outflow.get('summer_peak', 'unknown')}")
+    out.append("            {% endif %}")
+    out.append("          {% else %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
+    out.append(f"              {outflow.get('winter_off_peak', 'unknown')}")
+    out.append("            {% else %}")
+    out.append(f"              {outflow.get('summer_off_peak', 'unknown')}")
+    out.append("            {% endif %}")
+    out.append("          {% endif %}")
+
     min_start = min(wp_h['start'], sp_h['start'])
     max_end = max(wp_h['end'], sp_h['end'])
     out.append("  - binary_sensor:")
@@ -305,6 +349,32 @@ def generate_d1_11(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("            {% endif %}")
     out.append("          {% else %}")
     out.append(f"            {{{{ {off_peak_total} }}}}")
+    out.append("          {% endif %}")
+
+    outflow = sched.get("outflow_rates", {})
+    out.append("  - sensor:")
+    out.append('      - name: "D1.11 Outflow"')
+    out.append('        unique_id: "d1_11_outflow"')
+    out.append('        unit_of_measurement: "USD/kWh"')
+    out.append("        device_class: monetary")
+    out.append("        state: >")
+    out.append(
+        "          {# Rider 18 outflow credit = power supply + PSCR,"
+        " per DTE Rate Book Sheet D-115.00. #}"
+    )
+    out.append("          {% set month = now().month %}")
+    out.append("          {% if is_state('binary_sensor.d1_11_peak_hours', 'on') %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp_cond['months'])}] %}}")
+    out.append(f"              {outflow.get('oct_may_peak', 'unknown')}")
+    out.append("            {% else %}")
+    out.append(f"              {outflow.get('jun_sep_peak', 'unknown')}")
+    out.append("            {% endif %}")
+    out.append("          {% else %}")
+    out.append(f"            {{% if month in [{fmt_month_list(wp_cond['months'])}] %}}")
+    out.append(f"              {outflow.get('oct_may_off_peak', 'unknown')}")
+    out.append("            {% else %}")
+    out.append(f"              {outflow.get('jun_sep_off_peak', 'unknown')}")
+    out.append("            {% endif %}")
     out.append("          {% endif %}")
 
     out.append("  - binary_sensor:")

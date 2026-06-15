@@ -8,6 +8,9 @@ distribution: 0.09726
 schedules:
   d1.1:
     name: D1.1 Interruptible Space Conditioning
+    outflow_rates:
+      summer: 0.09244
+      winter: 0.07114
     conditions:
     - name: winter
       months: [10, 11, 12, 1, 2, 3, 4, 5]
@@ -19,12 +22,13 @@ schedules:
       non_capacity: 0.04535
   d1.2:
     name: D1.2 Enhanced Time-of-Use
-    # Sell-back estimate for net metering, not derived from tariff marginal-cost accounting.
+    # Rider 18 outflow credits = power supply (capacity + non-capacity) + PSCR.
+    # Source: DTE Rate Book, Sheet D-115.00 (effective March 5, 2026, Case U-21860).
     outflow_rates:
-      winter_peak: 0.1321
-      winter_off_peak: 0.05059
-      summer_peak: 0.15369
-      summer_off_peak: 0.05265
+      winter_peak: 0.15564
+      winter_off_peak: 0.07118
+      summer_peak: 0.18080
+      summer_off_peak: 0.07333
     conditions:
     - name: winter_peak
       months: [10, 11, 12, 1, 2, 3, 4, 5]
@@ -48,6 +52,11 @@ schedules:
       non_capacity: 0.03881
   d1.7:
     name: D1.7 Geothermal Time-of-Day
+    outflow_rates:
+      summer_peak: 0.15694
+      summer_off_peak: 0.06454
+      winter_peak: 0.07847
+      winter_off_peak: 0.06568
     conditions:
     - name: winter_peak
       months: [10, 11, 12, 1, 2, 3, 4, 5]
@@ -71,6 +80,13 @@ schedules:
       non_capacity: 0.02874
   d1.11:
     name: D1.11 Standard Time-of-Use
+    # Rider 18 outflow credits = power supply + PSCR.
+    # Source: DTE Rate Book, Sheet D-115.00 (effective March 5, 2026, Case U-21860).
+    outflow_rates:
+      jun_sep_peak: 0.16284
+      jun_sep_off_peak: 0.10586
+      oct_may_peak: 0.12196
+      oct_may_off_peak: 0.10586
     conditions:
     - {name: off_peak, default: true, capacity: 0.0324, non_capacity: 0.05469}
     - name: winter_peak

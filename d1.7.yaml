@@ -28,6 +28,27 @@ template:
               {{ 0.17284 }}
             {% endif %}
           {% endif %}
+  - sensor:
+      - name: "D1.7 Outflow"
+        unique_id: "d1_7_outflow"
+        unit_of_measurement: "USD/kWh"
+        device_class: monetary
+        state: >
+          {# Rider 18 outflow credit = power supply + PSCR, per DTE Rate Book Sheet D-115.00. #}
+          {% set month = now().month %}
+          {% if is_state('binary_sensor.d1_7_peak_hours', 'on') %}
+            {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+              0.07847
+            {% else %}
+              0.15694
+            {% endif %}
+          {% else %}
+            {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
+              0.06568
+            {% else %}
+              0.06454
+            {% endif %}
+          {% endif %}
   - binary_sensor:
       - name: "D1.7 Peak Hours"
         unique_id: "d1_7_peak_hours"

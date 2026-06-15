@@ -34,19 +34,19 @@ template:
         unit_of_measurement: "USD/kWh"
         device_class: monetary
         state: >
-          {# This outflow rate is a sell-back estimate and is not derived from the D1.2 tariff marginal-cost accounting above. #}
+          {# Rider 18 outflow credit = power supply (capacity + non-capacity) + PSCR, per DTE Rate Book Sheet D-115.00. #}
           {% set month = now().month %}
           {% if is_state('binary_sensor.d1_2_peak_hours', 'on') %}
             {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
-              0.1321
+              0.15564
             {% else %}
-              0.15369
+              0.1808
             {% endif %}
           {% else %}
             {% if month in [10, 11, 12, 1, 2, 3, 4, 5] %}
-              0.05059
+              0.07118
             {% else %}
-              0.05265
+              0.07333
             {% endif %}
           {% endif %}
   - binary_sensor:
