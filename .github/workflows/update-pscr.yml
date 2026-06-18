@@ -106,14 +106,6 @@ jobs:
           echo "- PSCR changed: ${{ steps.changed.outputs.pscr }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Committed: ${{ steps.auto-commit.outputs.changes_detected }}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create legacy release asset aliases
-        if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false' || inputs.publish_release_assets
-        run: |
-          cp d1_1.yaml d1.1.yaml
-          cp d1_2.yaml d1.2.yaml
-          cp d1_7.yaml d1.7.yaml
-          cp d1_11.yaml d1.11.yaml
-
       - name: Create release
         if: steps.auto-commit.outputs.changes_detected == 'true' || steps.check-release.outputs.any_exists == 'false' || inputs.publish_release_assets
         uses: softprops/action-gh-release@v2
@@ -127,7 +119,3 @@ jobs:
             d1_2.yaml
             d1_7.yaml
             d1_11.yaml
-            d1.1.yaml
-            d1.2.yaml
-            d1.7.yaml
-            d1.11.yaml

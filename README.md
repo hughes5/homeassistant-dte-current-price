@@ -47,24 +47,16 @@ set -eu
 schedule="${1:-d1.11}"
 schedule_slug="$(printf '%s' "$schedule" | tr '.' '_')"
 dest="/config/packages/dte_${schedule_slug}.yaml"
-legacy_dest="/config/packages/dte-${schedule}.yaml"
 tmp="${dest}.tmp"
 
 mkdir -p "$(dirname "$dest")"
 
-if ! curl -fsSL \
+curl -fsSL \
   "https://github.com/hughes5/homeassistant-dte-current-price/releases/latest/download/${schedule_slug}.yaml" \
-  -o "$tmp"; then
-  curl -fsSL \
-    "https://github.com/hughes5/homeassistant-dte-current-price/releases/latest/download/${schedule}.yaml" \
-    -o "$tmp"
-fi
+  -o "$tmp"
 
 mv "$tmp" "$dest"
 
-if [ "$legacy_dest" != "$dest" ] && [ -f "$legacy_dest" ]; then
-  rm -f "$legacy_dest"
-fi
 ```
 
 Make it executable from the Terminal & SSH add-on:
