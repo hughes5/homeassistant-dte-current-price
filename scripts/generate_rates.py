@@ -72,16 +72,15 @@ def build_header_block(data: dict[str, Any], schedule_key: str, schedule: dict[s
     id_ = schedule_key.upper()
     name = schedule["name"]
     total_surcharge = data["pscr"] + (
-        data["securitization"]["river_rouge"][schedule_key]
-        + data["securitization"]["tcsc"][schedule_key]
+        data["securitization"]["river_rouge"][schedule_key] + data["securitization"]["tcsc"][schedule_key]
     )
     return [
         "{# Total marginal rates from the Michigan Public Service Commission DTE tariff,",
         f"   including {name} base energy charges, the {id_} distribution charge,",
         "   C8.5 power supply surcharge totals, and C9.8 delivery surcharge totals.",
         "   Fixed monthly service charges are excluded from the per-kWh marginal rate.",
-        f"   PSCR factor: {data['pscr']*1000:.3f} mills/kWh",
-        f"   C8.5 total supply surcharge: {total_surcharge*100:.4f}¢/kWh",
+        f"   PSCR factor: {data['pscr'] * 1000:.3f} mills/kWh",
+        f"   C8.5 total supply surcharge: {total_surcharge * 100:.4f}¢/kWh",
         "   See https://github.com/hughes5/homeassistant-dte-current-price",
         "   for source data and automated rate updates.",
         "#}",
@@ -98,6 +97,11 @@ def write_yaml(path: Path, lines: list[str]) -> None:
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print(f"  wrote {path}")
+
+
+def schedule_filename(schedule_key: str) -> str:
+    """Return the package-safe YAML filename for a DTE schedule."""
+    return f"{schedule_key.replace('.', '_')}.yaml"
 
 
 def generate_d1_1(data: dict[str, Any], output_dir: str | Path) -> None:
@@ -136,10 +140,7 @@ def generate_d1_1(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.append(
-        "          {# Rider 18 outflow credit = power supply + PSCR,"
-        " per DTE Rate Book Sheet D-115.00. #}"
-    )
+    out.append("          {# Rider 18 outflow credit = power supply + PSCR, per DTE Rate Book Sheet D-115.00. #}")
     out.append("          {% set month = now().month %}")
     out.append(f"          {{% if month in [{fmt_month_list(winter['months'])}] %}}")
     out.append(f"            {outflow.get('winter', 'unknown')}")
@@ -147,7 +148,7 @@ def generate_d1_1(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append(f"            {outflow.get('summer', 'unknown')}")
     out.append("          {% endif %}")
 
-    write_yaml(Path(output_dir) / "d1.1.yaml", out)
+    write_yaml(Path(output_dir) / schedule_filename(key), out)
 
 
 def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
@@ -217,8 +218,8 @@ def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("            {% endif %}")
     out.append("          {% endif %}")
 
-    min_start = min(wp_h['start'], sp_h['start'])
-    max_end = max(wp_h['end'], sp_h['end'])
+    min_start = min(wp_h["start"], sp_h["start"])
+    max_end = max(wp_h["end"], sp_h["end"])
     out.append("  - binary_sensor:")
     out.append('      - name: "D1.2 Peak Hours"')
     out.append('        unique_id: "d1_2_peak_hours"')
@@ -228,7 +229,7 @@ def generate_d1_2(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append(f"          {{{{ day_of_week in [1,2,3,4,5] and hour >= {min_start} and hour < {max_end} }}}}")
 
-    write_yaml(Path(output_dir) / "d1.2.yaml", out)
+    write_yaml(Path(output_dir) / schedule_filename(key), out)
 
 
 def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
@@ -279,10 +280,7 @@ def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.append(
-        "          {# Rider 18 outflow credit = power supply + PSCR,"
-        " per DTE Rate Book Sheet D-115.00. #}"
-    )
+    out.append("          {# Rider 18 outflow credit = power supply + PSCR, per DTE Rate Book Sheet D-115.00. #}")
     out.append("          {% set month = now().month %}")
     out.append("          {% if is_state('binary_sensor.d1_7_peak_hours', 'on') %}")
     out.append(f"            {{% if month in [{fmt_month_list(wp['months'])}] %}}")
@@ -298,8 +296,8 @@ def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("            {% endif %}")
     out.append("          {% endif %}")
 
-    min_start = min(wp_h['start'], sp_h['start'])
-    max_end = max(wp_h['end'], sp_h['end'])
+    min_start = min(wp_h["start"], sp_h["start"])
+    max_end = max(wp_h["end"], sp_h["end"])
     out.append("  - binary_sensor:")
     out.append('      - name: "D1.7 Peak Hours"')
     out.append('        unique_id: "d1_7_peak_hours"')
@@ -309,7 +307,7 @@ def generate_d1_7(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append(f"          {{{{ day_of_week in [1,2,3,4,5] and hour >= {min_start} and hour < {max_end} }}}}")
 
-    write_yaml(Path(output_dir) / "d1.7.yaml", out)
+    write_yaml(Path(output_dir) / schedule_filename(key), out)
 
 
 def generate_d1_11(data: dict[str, Any], output_dir: str | Path) -> None:
@@ -358,10 +356,7 @@ def generate_d1_11(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append('        unit_of_measurement: "USD/kWh"')
     out.append("        device_class: monetary")
     out.append("        state: >")
-    out.append(
-        "          {# Rider 18 outflow credit = power supply + PSCR,"
-        " per DTE Rate Book Sheet D-115.00. #}"
-    )
+    out.append("          {# Rider 18 outflow credit = power supply + PSCR, per DTE Rate Book Sheet D-115.00. #}")
     out.append("          {% set month = now().month %}")
     out.append("          {% if is_state('binary_sensor.d1_11_peak_hours', 'on') %}")
     out.append(f"            {{% if month in [{fmt_month_list(wp_cond['months'])}] %}}")
@@ -386,7 +381,7 @@ def generate_d1_11(data: dict[str, Any], output_dir: str | Path) -> None:
     out.append("          {% set day_of_week = now().isoweekday() %}")
     out.append(f"          {{{{ day_of_week in [1,2,3,4,5] and hour >= {min_start} and hour < {max_end} }}}}")
 
-    write_yaml(Path(output_dir) / "d1.11.yaml", out)
+    write_yaml(Path(output_dir) / schedule_filename(key), out)
 
 
 def build_release_notes(data: dict[str, Any], output_dir: str | Path) -> None:
@@ -401,8 +396,7 @@ def build_release_notes(data: dict[str, Any], output_dir: str | Path) -> None:
 
     lines = [
         "## Updated DTE Electric Rates\n",
-        f"PSCR factor: {data['pscr']*1000:.3f} mills/kWh "
-        f"({data['pscr']*100:.4f}¢/kWh = ${data['pscr']}/kWh)\n",
+        f"PSCR factor: {data['pscr'] * 1000:.3f} mills/kWh ({data['pscr'] * 100:.4f}¢/kWh = ${data['pscr']}/kWh)\n",
         "| Schedule | Name | Condition | Total ($/kWh) |",
         "|---|---|---|---|",
     ]

@@ -8,20 +8,20 @@ Pick your schedule and install its YAML as a Home Assistant package. Keeping the
 
 | Schedule | File | Description |
 |---|---|---|
-| D1.1 | [`d1.1.yaml`](d1.1.yaml) | Interruptible Space Conditioning — two flat seasonal rates |
-| D1.2 | [`d1.2.yaml`](d1.2.yaml) | Enhanced Time-of-Use — peak/off-peak by season + Outflow sell-back estimate |
-| D1.7 | [`d1.7.yaml`](d1.7.yaml) | Geothermal Time-of-Day — peak/off-peak by season |
-| D1.11 | [`d1.11.yaml`](d1.11.yaml) | Standard Time-of-Use — peak/off-peak by season |
+| D1.1 | [`d1_1.yaml`](d1_1.yaml) | Interruptible Space Conditioning — two flat seasonal rates |
+| D1.2 | [`d1_2.yaml`](d1_2.yaml) | Enhanced Time-of-Use — peak/off-peak by season + Outflow sell-back estimate |
+| D1.7 | [`d1_7.yaml`](d1_7.yaml) | Geothermal Time-of-Day — peak/off-peak by season |
+| D1.11 | [`d1_11.yaml`](d1_11.yaml) | Standard Time-of-Use — peak/off-peak by season |
 
 Each sensor provides a `{{ state }}` in USD/kWh for the current marginal rate (excludes fixed monthly service charges). Add it to an energy dashboard or automation.
 
-> **Warning:** Do not edit the YAML files (`d1.1.yaml`, `d1.2.yaml`, etc.) directly. They are generated from [`rates/data.yaml`](rates/data.yaml) by `scripts/generate_rates.py`. To change rates, edit the source data and re-run the generator.
+> **Warning:** Do not edit the YAML files (`d1_1.yaml`, `d1_2.yaml`, etc.) directly. They are generated from [`rates/data.yaml`](rates/data.yaml) by `scripts/generate_rates.py`. To change rates, edit the source data and re-run the generator.
 
 ## Home Assistant install/update options
 
 Quick-start setup: you can open a schedule file above and paste its contents directly into `configuration.yaml`.
 
-Recommended manual setup: enable packages, then copy the schedule YAML you need into a separate file such as `/config/packages/dte-d1.11.yaml`.
+Recommended manual setup: enable packages, then copy the schedule YAML you need into a separate file such as `/config/packages/dte_d1_11.yaml`. Package filenames used with `!include_dir_named` must be slug-safe; avoid dots in the package filename.
 
 Automated setup: use a Home Assistant package and download the latest released template for your rate schedule from the release asset URL. The update script below creates the package file the first time it runs, then replaces it on later runs.
 
@@ -45,16 +45,26 @@ Create `/config/scripts/update_dte_rate_template.sh` in Home Assistant:
 set -eu
 
 schedule="${1:-d1.11}"
-dest="/config/packages/dte-${schedule}.yaml"
+schedule_slug="$(printf '%s' "$schedule" | tr '.' '_')"
+dest="/config/packages/dte_${schedule_slug}.yaml"
+legacy_dest="/config/packages/dte-${schedule}.yaml"
 tmp="${dest}.tmp"
 
 mkdir -p "$(dirname "$dest")"
 
-curl -fsSL \
-  "https://github.com/hughes5/homeassistant-dte-current-price/releases/latest/download/${schedule}.yaml" \
-  -o "$tmp"
+if ! curl -fsSL \
+  "https://github.com/hughes5/homeassistant-dte-current-price/releases/latest/download/${schedule_slug}.yaml" \
+  -o "$tmp"; then
+  curl -fsSL \
+    "https://github.com/hughes5/homeassistant-dte-current-price/releases/latest/download/${schedule}.yaml" \
+    -o "$tmp"
+fi
 
 mv "$tmp" "$dest"
+
+if [ "$legacy_dest" != "$dest" ] && [ -f "$legacy_dest" ]; then
+  rm -f "$legacy_dest"
+fi
 ```
 
 Make it executable from the Terminal & SSH add-on:
@@ -111,7 +121,7 @@ pip install -r requirements.txt
 
 ### Data model
 
-[`rates/data.yaml`](rates/data.yaml) is the single source of truth for all rate data. The YAML schedule files (`d1.1.yaml`, `d1.2.yaml`, etc.) at the repository root are **generated** — never edit them directly. To change rates, edit `rates/data.yaml` and re-run the generator.
+[`rates/data.yaml`](rates/data.yaml) is the single source of truth for all rate data. The YAML schedule files (`d1_1.yaml`, `d1_2.yaml`, etc.) at the repository root are **generated** — never edit them directly. To change rates, edit `rates/data.yaml` and re-run the generator.
 
 ### Making changes
 

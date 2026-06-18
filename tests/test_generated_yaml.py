@@ -4,7 +4,12 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-SCHEDULE_FILES = ["d1.1.yaml", "d1.2.yaml", "d1.7.yaml", "d1.11.yaml"]
+SCHEDULE_FILES = ["d1_1.yaml", "d1_2.yaml", "d1_7.yaml", "d1_11.yaml"]
+
+
+def test_schedule_filenames_are_package_slugs():
+    for filename in SCHEDULE_FILES:
+        assert "." not in Path(filename).stem
 
 
 @pytest.fixture(params=SCHEDULE_FILES)
@@ -37,6 +42,7 @@ class TestGeneratedYamlSyntax:
         assert isinstance(schedule_data["template"], list)
         assert len(schedule_data["template"]) > 0
         assert "sensor" in schedule_data["template"][0]
+
 
 def get_all_sensors(schedule_data):
     """Generator yielding all sensor dicts from all template list items."""
@@ -84,9 +90,7 @@ class TestGeneratedSensorStructure:
             if sensor.get("device_class") != "monetary":
                 continue
             state = sensor["state"]
-            assert any(
-                c.isdigit() for c in state
-            ), "state template must contain numeric rate literals"
+            assert any(c.isdigit() for c in state), "state template must contain numeric rate literals"
 
 
 class TestGeneratedRateValues:
@@ -121,4 +125,3 @@ class TestGeneratedRateValues:
             for rate_str in rates:
                 rate = float(rate_str)
                 assert 0.05 <= rate <= 0.50, f"Rate {rate} outside expected $/kWh range"
-
