@@ -79,7 +79,7 @@ jobs:
           echo "name=$name_str" >> "$GITHUB_OUTPUT"
 
       - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         id: auto-commit
         with:
           commit_message: "Update PSCR factor from DTE rate book PDF"
